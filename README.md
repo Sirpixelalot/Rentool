@@ -115,7 +115,7 @@ python {
 
 ### File Operations
 
-- Uses direct `File` API (not Storage Access Framework) for maximum performance
+- Uses direct `File` API for maximum performance
 - Requires `MANAGE_EXTERNAL_STORAGE` permission on Android 11+
 - Files are overwritten without prompting during extraction
 - Batch creation uses temporary directory for combining multiple sources
