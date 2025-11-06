@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:title="Processing..."
+            app:titleTextColor="?attr/colorOnPrimary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <!-- Main Progress Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:gravity="center">
+
+                    <!-- Operation Type -->
+                    <TextView
+                        android:id="@+id/tv_operation"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Extracting RPA..."
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="24dp" />
+
+                    <!-- Large Percentage Display -->
+                    <TextView
+                        android:id="@+id/tv_percentage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textSize="72sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Progress Bar -->
+                    <ProgressBar
+                        android:id="@+id/progress_bar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressTint="?attr/colorPrimary"
+                        android:layout_marginBottom="8dp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Details Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- File Count -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Files:"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/tv_file_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0/0"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace" />
+
+                    </LinearLayout>
+
+                    <!-- Current File -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Current file:"
+                            android:textSize="14sp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/tv_current_file"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Initializing..."
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:ellipsize="middle"
+                            android:singleLine="true" />
+
+                    </LinearLayout>
+
+                    <!-- Processing Speed -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Speed:"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/tv_speed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="calculating..."
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace" />
+
+                    </LinearLayout>
+
+                    <!-- ETA -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Remaining:"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/tv_eta"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="calculating..."
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Info Text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Please wait while the operation completes..."
+                android:textSize="14sp"
+                android:gravity="center"
+                android:layout_marginTop="16dp" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

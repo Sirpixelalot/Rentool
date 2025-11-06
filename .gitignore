@@ -1,0 +1,33 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Claude Code workspace settings
+.claude/
+
+# Python cache files
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Editor temporary files
+*.swp
+*.swo
+*~
+
+# APK build outputs (optional - uncomment to exclude)
+# *.apk
+# *.aab
