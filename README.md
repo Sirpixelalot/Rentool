@@ -19,7 +19,7 @@ An Android application for extracting and creating Ren'Py RPA (Ren'Py Archive) f
 
 - **Android 11 (API 30) or higher**
 - **MANAGE_EXTERNAL_STORAGE permission**: Required for direct file system access
-- **Storage**: Sufficient space for extracted/created archives
+- **Storage**: Enough space for extracted/created archives
 
 ## Installation
 
@@ -140,7 +140,7 @@ python {
 - **RPA Format**: Based on [Ren'Py](https://www.renpy.org/) archive specification
 - **Python Integration**: [Chaquopy](https://chaquo.com/chaquopy/)
 - **Folder Icons**: [Icons8](https://icons8.com/)
-
+- **Shizmob**: [rpatool](https://github.com/shizmob/rpatool)
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
