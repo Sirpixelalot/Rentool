@@ -1,6 +1,6 @@
 # Renpytool
 
-An Android application for extracting and creating Ren'Py RPA (Ren'Py Archive) files directly on your device.
+An Android application to extract and create Ren'Py RPA files directly on your device.
 
 ## Features
 
@@ -11,9 +11,8 @@ An Android application for extracting and creating Ren'Py RPA (Ren'Py Archive) f
   - Combine multiple files/folders into a single RPA archive
 - **Multi-Select Support**: Long-press to select multiple files or folders for batch operations
 - **Smart Directory Defaults**: Output directory automatically defaults to the location of selected input files
-- **Direct File Path Access**: Uses direct filesystem access (no SAF overhead) for fast operations
+- **Direct File Path Access**: Uses direct filesystem access for fast operations
 - **Real-Time Progress Tracking**: View extraction/creation progress with file counts, speed, and ETA
-- **Custom UI**: Material Design 3 interface with custom folder icons
 
 ## Requirements
 
