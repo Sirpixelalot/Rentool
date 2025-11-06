@@ -28,7 +28,7 @@ __pycache__/
 *.swo
 *~
 
-# APK build outputs (optional - uncomment to exclude)
+
 # *.apk
 # *.aab
 
