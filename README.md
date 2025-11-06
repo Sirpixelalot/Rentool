@@ -12,7 +12,7 @@ An Android application to extract and create Ren'Py RPA files directly on your d
 - **Multi-Select Support**: Long-press to select multiple files or folders for batch operations
 - **Smart Directory Defaults**: Output directory automatically defaults to the location of selected input files
 - **Direct File Path Access**: Uses direct filesystem access for fast operations
-- **Real-Time Progress Tracking**: View extraction/creation progress with file counts, speed, and ETA
+- **Real-time Progress Tracking**: View extraction/creation progress with file counts, speed, and ETA
 
 ## Requirements
 
