@@ -139,7 +139,7 @@ python {
 - **RPA Format**: Based on [Ren'Py](https://www.renpy.org/) archive specification
 - **Python Integration**: [Chaquopy](https://chaquo.com/chaquopy/)
 - **Folder Icons**: [Icons8](https://icons8.com/)
-- **Shizmob**: [rpatool](https://codeberg.org/shiz/rpatool)
+- **Rpatool**: [Shizmob](https://codeberg.org/shiz/rpatool)
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
