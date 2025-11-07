@@ -140,6 +140,7 @@ python {
 - **Python Integration**: [Chaquopy](https://chaquo.com/chaquopy/)
 - **Folder Icons**: [Icons8](https://icons8.com/)
 - **Rpatool**: [Shizmob](https://codeberg.org/shiz/rpatool)
+- **Unrpyc**: [CensoredUsername](https://github.com/CensoredUsername/unrpyc)
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
