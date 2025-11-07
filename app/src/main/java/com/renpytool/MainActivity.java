@@ -307,6 +307,9 @@ public class MainActivity extends AppCompatActivity {
             int totalFiles = rpaFilePaths.size();
             int currentIndex = 1;
 
+            // Capture the batch start time - use this for all files
+            long batchStartTime = System.currentTimeMillis();
+
             for (String rpaFilePath : rpaFilePaths) {
                 try {
                     // Get file name for display
@@ -319,7 +322,7 @@ public class MainActivity extends AppCompatActivity {
                     batchProgress.totalBatchCount = totalFiles;
                     batchProgress.currentBatchFileName = fileName;
                     batchProgress.status = "in_progress";
-                    batchProgress.startTime = System.currentTimeMillis();
+                    batchProgress.startTime = batchStartTime;  // Use batch start time, not current time
                     batchProgress.lastUpdateTime = System.currentTimeMillis();
                     batchProgress.totalFiles = 0;
                     batchProgress.processedFiles = 0;
@@ -379,9 +382,11 @@ public class MainActivity extends AppCompatActivity {
                 completeData.status = "completed";
                 completeData.currentBatchIndex = totalFiles;
                 completeData.totalBatchCount = totalFiles;
-                completeData.totalFiles = 1;
-                completeData.processedFiles = 1;
+                completeData.totalFiles = totalFiles;  // Show actual number of RPA files extracted
+                completeData.processedFiles = totalFiles;
                 completeData.currentFile = "Complete";
+                completeData.startTime = batchStartTime;  // Use batch start time for accurate elapsed time
+                completeData.lastUpdateTime = System.currentTimeMillis();
                 tracker.writeProgress(completeData);
 
                 runOnUiThread(() -> {
@@ -404,6 +409,17 @@ public class MainActivity extends AppCompatActivity {
 
         executorService.execute(() -> {
             try {
+                // Initialize progress with start time
+                ProgressData initialData = new ProgressData();
+                initialData.operation = "extract";
+                initialData.status = "in_progress";
+                initialData.startTime = System.currentTimeMillis();
+                initialData.lastUpdateTime = System.currentTimeMillis();
+                initialData.totalFiles = 0;
+                initialData.processedFiles = 0;
+                initialData.currentFile = "Starting extraction...";
+                tracker.writeProgress(initialData);
+
                 // Get progress file path
                 String progressFilePath = tracker.getProgressFilePath();
 
@@ -464,8 +480,11 @@ public class MainActivity extends AppCompatActivity {
         executorService.execute(() -> {
             java.io.File tempDir = null;
             try {
+                // Capture the batch start time - use this for all phases
+                long batchStartTime = System.currentTimeMillis();
+
                 // Create temporary directory for combining all sources
-                tempDir = new java.io.File(getCacheDir(), "rpa_batch_temp_" + System.currentTimeMillis());
+                tempDir = new java.io.File(getCacheDir(), "rpa_batch_temp_" + batchStartTime);
                 if (!tempDir.mkdir()) {
                     throw new Exception("Failed to create temporary directory");
                 }
@@ -486,7 +505,7 @@ public class MainActivity extends AppCompatActivity {
                     copyProgress.totalBatchCount = totalItems;
                     copyProgress.currentBatchFileName = itemName;
                     copyProgress.status = "in_progress";
-                    copyProgress.startTime = System.currentTimeMillis();
+                    copyProgress.startTime = batchStartTime;  // Use batch start time, not current time
                     copyProgress.lastUpdateTime = System.currentTimeMillis();
                     copyProgress.totalFiles = 0;
                     copyProgress.processedFiles = 0;
@@ -512,7 +531,7 @@ public class MainActivity extends AppCompatActivity {
                 createProgress.totalBatchCount = totalItems;
                 createProgress.currentBatchFileName = "Creating final archive...";
                 createProgress.status = "in_progress";
-                createProgress.startTime = System.currentTimeMillis();
+                createProgress.startTime = batchStartTime;  // Use batch start time for accurate elapsed time
                 createProgress.lastUpdateTime = System.currentTimeMillis();
                 createProgress.totalFiles = 0;
                 createProgress.processedFiles = 0;
@@ -626,6 +645,17 @@ public class MainActivity extends AppCompatActivity {
 
         executorService.execute(() -> {
             try {
+                // Initialize progress with start time
+                ProgressData initialData = new ProgressData();
+                initialData.operation = "create";
+                initialData.status = "in_progress";
+                initialData.startTime = System.currentTimeMillis();
+                initialData.lastUpdateTime = System.currentTimeMillis();
+                initialData.totalFiles = 0;
+                initialData.processedFiles = 0;
+                initialData.currentFile = "Starting creation...";
+                tracker.writeProgress(initialData);
+
                 // Get progress file path
                 String progressFilePath = tracker.getProgressFilePath();
 
@@ -702,23 +732,55 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Get the current app version from PackageManager
+     */
+    private String getAppVersion() {
+        try {
+            PackageManager packageManager = getPackageManager();
+            String packageName = getPackageName();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ (API 33+) - Use PackageInfoFlags
+                android.content.pm.PackageInfo packageInfo = packageManager.getPackageInfo(
+                        packageName,
+                        PackageManager.PackageInfoFlags.of(0)
+                );
+                return packageInfo.versionName;
+            } else {
+                // Older Android versions - deprecated but still works
+                android.content.pm.PackageInfo packageInfo = packageManager.getPackageInfo(packageName, 0);
+                return packageInfo.versionName;
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            android.util.Log.e("MainActivity", "Failed to get app version", e);
+            return "1.0";  // Fallback version
+        }
+    }
+
+    /**
      * Check for app updates from GitHub releases
      */
     private void checkForUpdates() {
+        android.util.Log.d("MainActivity", "Starting update check...");
+        String currentVersion = getAppVersion();
+        android.util.Log.d("MainActivity", "Current app version: " + currentVersion);
         executorService.execute(() -> {
-            UpdateChecker.checkForUpdates("1.0", new UpdateChecker.UpdateCheckCallback() {
+            UpdateChecker.checkForUpdates(currentVersion, new UpdateChecker.UpdateCheckCallback() {
                 @Override
                 public void onUpdateAvailable(VersionInfo versionInfo) {
+                    android.util.Log.d("MainActivity", "Update available: " + versionInfo.getVersionTag());
                     runOnUiThread(() -> showUpdateDialog(versionInfo));
                 }
 
                 @Override
                 public void onNoUpdateAvailable() {
+                    android.util.Log.d("MainActivity", "No update available");
                     // Silent - no action needed
                 }
 
                 @Override
                 public void onCheckFailed(String error) {
+                    android.util.Log.e("MainActivity", "Update check failed: " + error);
                     // Silent fail - don't bother user with network errors
                 }
             });
@@ -729,9 +791,11 @@ public class MainActivity extends AppCompatActivity {
      * Show update available dialog
      */
     private void showUpdateDialog(VersionInfo versionInfo) {
+        String currentVersion = getAppVersion();
         String message = String.format(
-                "Version %s is now available!\n\nYou are currently using version 1.0.\n\nWould you like to download the update?",
-                versionInfo.getVersionNumber()
+                "Version %s is now available!\n\nYou are currently using version %s.\n\nWould you like to download the update?",
+                versionInfo.getVersionNumber(),
+                currentVersion
         );
 
         new AlertDialog.Builder(this)

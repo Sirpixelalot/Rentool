@@ -43,6 +43,11 @@ public class ProgressTracker {
         json.put("status", data.status);
         json.put("errorMessage", data.errorMessage != null ? data.errorMessage : "");
 
+        // Batch operation fields
+        json.put("currentBatchIndex", data.currentBatchIndex);
+        json.put("totalBatchCount", data.totalBatchCount);
+        json.put("currentBatchFileName", data.currentBatchFileName != null ? data.currentBatchFileName : "");
+
         try (FileOutputStream out = new FileOutputStream(progressFile)) {
             out.write(json.toString().getBytes());
         }
@@ -76,6 +81,11 @@ public class ProgressTracker {
             data.lastUpdateTime = json.optLong("lastUpdateTime", 0);
             data.status = json.optString("status", "in_progress");
             data.errorMessage = json.optString("errorMessage", "");
+
+            // Batch operation fields
+            data.currentBatchIndex = json.optInt("currentBatchIndex", 0);
+            data.totalBatchCount = json.optInt("totalBatchCount", 0);
+            data.currentBatchFileName = json.optString("currentBatchFileName", "");
 
             return data;
 
