@@ -36,12 +36,13 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
 
-    private MaterialCardView cardExtract, cardCreate;
-    private TextView tvStatus, tvExtractStatus, tvCreateStatus;
+    private MaterialCardView cardExtract, cardCreate, cardDecompile;
+    private TextView tvStatus, tvExtractStatus, tvCreateStatus, tvDecompileStatus;
     private ProgressBar progressBar;
 
     private Python python;
     private PyObject rpaModule;
+    private PyObject decompileModule;
 
     private ExecutorService executorService;
 
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> extractDirPickerLauncher;
     private ActivityResultLauncher<Intent> createSourcePickerLauncher;
     private ActivityResultLauncher<Intent> createOutputPickerLauncher;
+    private ActivityResultLauncher<Intent> decompileDirPickerLauncher;
 
     // Temporary storage for multi-step file picking
     private String selectedRpaPath;
@@ -68,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         }
         python = Python.getInstance();
         rpaModule = python.getModule("rpa_wrapper");
+        decompileModule = python.getModule("decompile_wrapper");
 
         // Initialize executor service
         executorService = Executors.newSingleThreadExecutor();
@@ -88,14 +91,17 @@ public class MainActivity extends AppCompatActivity {
     private void initViews() {
         cardExtract = findViewById(R.id.card_extract);
         cardCreate = findViewById(R.id.card_create);
+        cardDecompile = findViewById(R.id.card_decompile);
         tvStatus = findViewById(R.id.tv_status);
         tvExtractStatus = findViewById(R.id.tv_extract_status);
         tvCreateStatus = findViewById(R.id.tv_create_status);
+        tvDecompileStatus = findViewById(R.id.tv_decompile_status);
         progressBar = findViewById(R.id.progress_bar);
 
         // Set up click listeners
         cardExtract.setOnClickListener(v -> startExtractFlow());
         cardCreate.setOnClickListener(v -> startCreateFlow());
+        cardDecompile.setOnClickListener(v -> startDecompileFlow());
     }
 
 
@@ -210,6 +216,31 @@ public class MainActivity extends AppCompatActivity {
                         }
                         // Now ask for output file name
                         showOutputFileNameDialog();
+                    }
+                });
+
+        // Decompile: Pick source directory
+        decompileDirPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                        String sourcePath = null;
+
+                        // Check for multi-select first (user may have accidentally entered multi-select mode)
+                        ArrayList<String> selectedPaths = result.getData().getStringArrayListExtra(FilePickerActivity.EXTRA_SELECTED_PATHS);
+                        if (selectedPaths != null && !selectedPaths.isEmpty()) {
+                            // If multi-select happened, just use the first path
+                            sourcePath = selectedPaths.get(0);
+                        } else {
+                            // Normal single selection
+                            sourcePath = result.getData().getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH);
+                        }
+
+                        if (sourcePath != null && !sourcePath.isEmpty()) {
+                            performDecompile(sourcePath);
+                        } else {
+                            Toast.makeText(this, "No directory selected", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 });
     }
@@ -705,11 +736,106 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void startDecompileFlow() {
+        // Launch file picker for directory containing .rpyc files
+        Intent intent = new Intent(this, FilePickerActivity.class);
+        intent.putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_DIRECTORY);
+        intent.putExtra(FilePickerActivity.EXTRA_TITLE, "Select Folder with RPYC Files");
+        decompileDirPickerLauncher.launch(intent);
+    }
+
+    private void performDecompile(String sourceDirPath) {
+        // Clear any old progress data before starting
+        ProgressTracker tracker = new ProgressTracker(MainActivity.this);
+        tracker.clearProgress();
+
+        // Launch progress activity
+        Intent intent = new Intent(this, ProgressActivity.class);
+        startActivity(intent);
+
+        executorService.execute(() -> {
+            try {
+                // Initialize progress with start time
+                ProgressData initialData = new ProgressData();
+                initialData.operation = "decompile";
+                initialData.status = "in_progress";
+                initialData.startTime = System.currentTimeMillis();
+                initialData.lastUpdateTime = System.currentTimeMillis();
+                initialData.totalFiles = 0;
+                initialData.processedFiles = 0;
+                initialData.currentFile = "Starting decompilation...";
+                tracker.writeProgress(initialData);
+
+                // Get progress file path
+                String progressFilePath = tracker.getProgressFilePath();
+
+                // Call Python decompilation
+                PyObject result = decompileModule.callAttr("decompile_directory",
+                    sourceDirPath,
+                    progressFilePath);
+
+                // Check if result is valid
+                if (result == null) {
+                    throw new Exception("Python function returned null");
+                }
+
+                // Access dictionary items using __getitem__
+                PyObject successObj = result.callAttr("__getitem__", "success");
+                PyObject messageObj = result.callAttr("__getitem__", "message");
+                PyObject statsObj = result.callAttr("__getitem__", "stats");
+
+                final boolean success = successObj.toJava(Boolean.class);
+                final String message = messageObj.toJava(String.class);
+
+                // Extract stats
+                PyObject totalObj = statsObj.callAttr("__getitem__", "total");
+                PyObject successCountObj = statsObj.callAttr("__getitem__", "success");
+                PyObject skippedObj = statsObj.callAttr("__getitem__", "skipped");
+                PyObject failedObj = statsObj.callAttr("__getitem__", "failed");
+
+                final int total = totalObj.toJava(Integer.class);
+                final int successCount = successCountObj.toJava(Integer.class);
+                final int skipped = skippedObj.toJava(Integer.class);
+                final int failed = failedObj.toJava(Integer.class);
+
+                runOnUiThread(() -> {
+                    if (success) {
+                        tvDecompileStatus.setText(String.format(
+                            "Decompiled %d files (%d success, %d skipped, %d failed)",
+                            total, successCount, skipped, failed
+                        ));
+                    } else {
+                        tvDecompileStatus.setText("Decompilation failed: " + message);
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+
+                // Update progress file with error
+                try {
+                    ProgressData errorData = new ProgressData();
+                    errorData.operation = "decompile";
+                    errorData.status = "failed";
+                    errorData.errorMessage = "Error: " + e.getMessage();
+                    tracker.writeProgress(errorData);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
+                runOnUiThread(() -> {
+                    tvDecompileStatus.setText("Decompilation error: " + e.getMessage());
+                });
+            }
+        });
+    }
+
     private void showProgress(String message) {
         progressBar.setVisibility(View.VISIBLE);
         tvStatus.setText(message);
         cardExtract.setEnabled(false);
         cardCreate.setEnabled(false);
+        cardDecompile.setEnabled(false);
     }
 
     private void hideProgress() {
@@ -717,6 +843,7 @@ public class MainActivity extends AppCompatActivity {
         tvStatus.setText("Ready");
         cardExtract.setEnabled(true);
         cardCreate.setEnabled(true);
+        cardDecompile.setEnabled(true);
     }
 
     private void showSuccess(String message) {

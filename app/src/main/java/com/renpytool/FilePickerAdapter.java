@@ -128,8 +128,21 @@ public class FilePickerAdapter extends RecyclerView.Adapter<FilePickerAdapter.Fi
                 ivIcon.setImageResource(R.drawable.ic_folder);
                 tvDetails.setText("Folder");
             } else {
-                // File
-                ivIcon.setImageResource(android.R.drawable.ic_menu_upload);
+                // File - check file type for custom icons
+                String fileName = item.getName().toLowerCase();
+                if (fileName.endsWith(".rpy") || fileName.endsWith(".rpyb")) {
+                    ivIcon.setImageResource(R.drawable.ic_script_file);
+                } else if (fileName.endsWith(".rpa") || fileName.endsWith(".rpyc") || fileName.endsWith(".rpymc")) {
+                    ivIcon.setImageResource(R.drawable.ic_rpa_file);
+                } else if (fileName.endsWith(".apk")) {
+                    ivIcon.setImageResource(R.drawable.ic_apk_file);
+                } else if (fileName.endsWith(".png")) {
+                    ivIcon.setImageResource(R.drawable.ic_png_file);
+                } else if (fileName.endsWith(".zip")) {
+                    ivIcon.setImageResource(R.drawable.ic_zip_file);
+                } else {
+                    ivIcon.setImageResource(android.R.drawable.ic_menu_upload);
+                }
                 tvDetails.setText(formatFileSize(item.getSize()) + " • " + formatDate(item.getLastModified()));
             }
 

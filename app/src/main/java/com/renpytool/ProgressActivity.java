@@ -95,8 +95,13 @@ public class ProgressActivity extends AppCompatActivity {
             operationType = data.operation.equals("extract") ?
                     "Copying files to destination..." : "Copying archive to destination...";
         } else {
-            operationType = data.operation.equals("extract") ?
-                    "Extracting RPA..." : "Creating RPA Archive...";
+            if (data.operation.equals("extract")) {
+                operationType = "Extracting RPA...";
+            } else if (data.operation.equals("decompile")) {
+                operationType = "Decompiling RPYC...";
+            } else {
+                operationType = "Creating RPA Archive...";
+            }
         }
 
         // Add batch information if in batch mode
