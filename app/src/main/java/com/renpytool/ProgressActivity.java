@@ -9,8 +9,9 @@ import android.view.WindowManager;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Locale;
 
@@ -156,7 +157,7 @@ public class ProgressActivity extends AppCompatActivity {
     private void handleCompletion(ProgressData data) {
         if (data.isCompleted()) {
             // Show success dialog
-            new AlertDialog.Builder(this)
+            new MaterialAlertDialogBuilder(this)
                     .setTitle("Success")
                     .setMessage(String.format(Locale.US,
                             "Operation completed successfully!\n\nProcessed %d files in %s",
@@ -174,7 +175,7 @@ public class ProgressActivity extends AppCompatActivity {
                     ? data.errorMessage
                     : "Operation failed";
 
-            new AlertDialog.Builder(this)
+            new MaterialAlertDialogBuilder(this)
                     .setTitle("Error")
                     .setMessage(errorMessage)
                     .setPositiveButton("OK", (dialog, which) -> {

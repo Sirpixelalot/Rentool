@@ -17,7 +17,6 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -26,6 +25,8 @@ import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 100;
 
     private MaterialCardView cardExtract, cardCreate, cardDecompile;
-    private TextView tvStatus, tvExtractStatus, tvCreateStatus, tvDecompileStatus;
-    private ProgressBar progressBar;
+    private TextView tvExtractStatus, tvCreateStatus, tvDecompileStatus;
 
     private Python python;
     private PyObject rpaModule;
@@ -92,11 +92,9 @@ public class MainActivity extends AppCompatActivity {
         cardExtract = findViewById(R.id.card_extract);
         cardCreate = findViewById(R.id.card_create);
         cardDecompile = findViewById(R.id.card_decompile);
-        tvStatus = findViewById(R.id.tv_status);
         tvExtractStatus = findViewById(R.id.tv_extract_status);
         tvCreateStatus = findViewById(R.id.tv_create_status);
         tvDecompileStatus = findViewById(R.id.tv_decompile_status);
-        progressBar = findViewById(R.id.progress_bar);
 
         // Set up click listeners
         cardExtract.setOnClickListener(v -> startExtractFlow());
@@ -109,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11 and above - use MANAGE_EXTERNAL_STORAGE
             if (!Environment.isExternalStorageManager()) {
-                new AlertDialog.Builder(this)
+                new MaterialAlertDialogBuilder(this)
                         .setTitle("Storage Permission Required")
                         .setMessage("This app needs access to manage files for RPA operations.")
                         .setPositiveButton("Grant", (dialog, which) -> {
@@ -287,8 +285,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showOutputFileNameDialog() {
-        android.widget.EditText etFileName = new android.widget.EditText(this);
-        etFileName.setHint("archive.rpa");
+        // Inflate custom dialog layout
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_input, null);
+        TextInputEditText etFileName = dialogView.findViewById(R.id.editText);
         etFileName.setText("archive.rpa");
 
         // Determine the default output directory
@@ -300,10 +299,10 @@ public class MainActivity extends AppCompatActivity {
             defaultOutputDir = selectedSourcePath;
         }
 
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Output File Name")
                 .setMessage("Enter the name for the output RPA file:")
-                .setView(etFileName)
+                .setView(dialogView)
                 .setPositiveButton("Create", (dialog, which) -> {
                     String fileName = etFileName.getText().toString().trim();
                     if (!fileName.isEmpty()) {
@@ -831,16 +830,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showProgress(String message) {
-        progressBar.setVisibility(View.VISIBLE);
-        tvStatus.setText(message);
         cardExtract.setEnabled(false);
         cardCreate.setEnabled(false);
         cardDecompile.setEnabled(false);
     }
 
     private void hideProgress() {
-        progressBar.setVisibility(View.GONE);
-        tvStatus.setText("Ready");
         cardExtract.setEnabled(true);
         cardCreate.setEnabled(true);
         cardDecompile.setEnabled(true);
@@ -851,7 +846,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showError(String message) {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Error")
                 .setMessage(message)
                 .setPositiveButton("OK", null)
@@ -925,7 +920,7 @@ public class MainActivity extends AppCompatActivity {
                 currentVersion
         );
 
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Update Available")
                 .setMessage(message)
                 .setPositiveButton("Update", (dialog, which) -> {
