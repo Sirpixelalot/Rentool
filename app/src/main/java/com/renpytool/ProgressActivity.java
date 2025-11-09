@@ -1,6 +1,7 @@
 package com.renpytool;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.File;
 import java.util.Locale;
 
 /**
@@ -156,19 +158,53 @@ public class ProgressActivity extends AppCompatActivity {
      */
     private void handleCompletion(ProgressData data) {
         if (data.isCompleted()) {
-            // Show success dialog
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("Success")
-                    .setMessage(String.format(Locale.US,
-                            "Operation completed successfully!\n\nProcessed %d files in %s",
-                            data.totalFiles,
-                            ProgressData.formatTime(data.getElapsedMs())))
-                    .setPositiveButton("OK", (dialog, which) -> {
-                        setResult(Activity.RESULT_OK);
-                        finish();
-                    })
-                    .setCancelable(false)
-                    .show();
+            // Check if this was an extract operation and if there are .rpyc files
+            String extractPath = getIntent().getStringExtra("EXTRACT_PATH");
+            boolean isExtract = "extract".equalsIgnoreCase(data.operation);
+            int rpycCount = 0;
+
+            if (isExtract && extractPath != null) {
+                rpycCount = countRpycFiles(new File(extractPath));
+            }
+
+            // Show enhanced dialog for extract with .rpyc files
+            if (isExtract && rpycCount > 0) {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Extraction Complete")
+                        .setMessage(String.format(Locale.US,
+                                "Extracted %d files successfully!\n\n📁 %s\n\nFound %d .rpyc files ready to decompile.",
+                                data.totalFiles,
+                                extractPath,
+                                rpycCount))
+                        .setPositiveButton("Decompile Now", (dialog, which) -> {
+                            // Pass extraction path back to MainActivity for chaining
+                            Intent intent = new Intent();
+                            intent.putExtra("CHAIN_OPERATION", "decompile");
+                            intent.putExtra("CHAIN_PATH", extractPath);
+                            setResult(Activity.RESULT_OK, intent);
+                            finish();
+                        })
+                        .setNegativeButton("Done", (dialog, which) -> {
+                            setResult(Activity.RESULT_OK);
+                            finish();
+                        })
+                        .setCancelable(false)
+                        .show();
+            } else {
+                // Standard success dialog
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Success")
+                        .setMessage(String.format(Locale.US,
+                                "Operation completed successfully!\n\nProcessed %d files in %s",
+                                data.totalFiles,
+                                ProgressData.formatTime(data.getElapsedMs())))
+                        .setPositiveButton("OK", (dialog, which) -> {
+                            setResult(Activity.RESULT_OK);
+                            finish();
+                        })
+                        .setCancelable(false)
+                        .show();
+            }
         } else if (data.isFailed()) {
             // Show error dialog
             String errorMessage = data.errorMessage != null && !data.errorMessage.isEmpty()
@@ -185,6 +221,28 @@ public class ProgressActivity extends AppCompatActivity {
                     .setCancelable(false)
                     .show();
         }
+    }
+
+    /**
+     * Count .rpyc files in a directory (recursively)
+     */
+    private int countRpycFiles(File directory) {
+        int count = 0;
+        if (directory == null || !directory.exists() || !directory.isDirectory()) {
+            return 0;
+        }
+
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    count += countRpycFiles(file);
+                } else if (file.getName().toLowerCase().endsWith(".rpyc")) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     /**

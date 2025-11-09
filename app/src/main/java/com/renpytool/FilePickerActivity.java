@@ -225,10 +225,22 @@ public class FilePickerActivity extends AppCompatActivity {
     }
 
     private void selectFile(File file) {
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra(EXTRA_SELECTED_PATH, file.getAbsolutePath());
-        setResult(Activity.RESULT_OK, resultIntent);
-        finish();
+        // Check if we should open the editor instead of returning
+        boolean openEditor = getIntent().getBooleanExtra("OPEN_EDITOR", false);
+
+        if (openEditor && file.getName().endsWith(".rpy")) {
+            // Open .rpy file in editor
+            Intent editorIntent = new Intent(this, RpyEditorActivity.class);
+            editorIntent.putExtra(RpyEditorActivity.EXTRA_FILE_PATH, file.getAbsolutePath());
+            startActivity(editorIntent);
+            finish();
+        } else {
+            // Return selected file to calling activity
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra(EXTRA_SELECTED_PATH, file.getAbsolutePath());
+            setResult(Activity.RESULT_OK, resultIntent);
+            finish();
+        }
     }
 
     private void selectCurrentDirectory() {

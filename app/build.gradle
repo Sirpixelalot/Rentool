@@ -55,8 +55,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
@@ -68,6 +68,11 @@ dependencies {
 
     // JSON parsing for update checker
     implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Sora Editor - Code editor for .rpy files
+    implementation platform('io.github.rosemoe:editor-bom:0.23.7')
+    implementation 'io.github.rosemoe:editor'
+    implementation 'io.github.rosemoe:language-textmate'
 
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit

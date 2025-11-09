@@ -46,6 +46,11 @@
             android:exported="false"
             android:theme="@style/Theme.Rentool" />
 
+        <activity
+            android:name=".RpyEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Rentool" />
+
     </application>
 
 </manifest>

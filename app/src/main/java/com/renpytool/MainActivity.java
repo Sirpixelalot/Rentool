@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
 
-    private MaterialCardView cardExtract, cardCreate, cardDecompile;
+    private MaterialCardView cardExtract, cardCreate, cardDecompile, cardEditRpy;
     private TextView tvExtractStatus, tvCreateStatus, tvDecompileStatus;
 
     private Python python;
@@ -52,6 +52,9 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> createSourcePickerLauncher;
     private ActivityResultLauncher<Intent> createOutputPickerLauncher;
     private ActivityResultLauncher<Intent> decompileDirPickerLauncher;
+
+    // Progress activity launcher for chaining operations
+    private ActivityResultLauncher<Intent> progressActivityLauncher;
 
     // Temporary storage for multi-step file picking
     private String selectedRpaPath;
@@ -92,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
         cardExtract = findViewById(R.id.card_extract);
         cardCreate = findViewById(R.id.card_create);
         cardDecompile = findViewById(R.id.card_decompile);
+        cardEditRpy = findViewById(R.id.card_edit_rpy);
         tvExtractStatus = findViewById(R.id.tv_extract_status);
         tvCreateStatus = findViewById(R.id.tv_create_status);
         tvDecompileStatus = findViewById(R.id.tv_decompile_status);
@@ -100,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
         cardExtract.setOnClickListener(v -> startExtractFlow());
         cardCreate.setOnClickListener(v -> startCreateFlow());
         cardDecompile.setOnClickListener(v -> startDecompileFlow());
+        cardEditRpy.setOnClickListener(v -> startEditRpyFlow());
     }
 
 
@@ -241,6 +246,22 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
+
+        // Progress Activity: Handle completion and chaining
+        progressActivityLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                        // Check if there's a chain operation requested
+                        String chainOperation = result.getData().getStringExtra("CHAIN_OPERATION");
+                        String chainPath = result.getData().getStringExtra("CHAIN_PATH");
+
+                        if ("decompile".equals(chainOperation) && chainPath != null) {
+                            // Start decompile with the extracted path
+                            performDecompile(chainPath);
+                        }
+                    }
+                });
     }
 
     private void startExtractFlow() {
@@ -329,9 +350,10 @@ public class MainActivity extends AppCompatActivity {
         ProgressTracker tracker = new ProgressTracker(MainActivity.this);
         tracker.clearProgress();
 
-        // Launch progress activity
+        // Launch progress activity with extraction path
         Intent intent = new Intent(this, ProgressActivity.class);
-        startActivity(intent);
+        intent.putExtra("EXTRACT_PATH", extractDirPath);
+        progressActivityLauncher.launch(intent);
 
         executorService.execute(() -> {
             int totalFiles = rpaFilePaths.size();
@@ -433,9 +455,10 @@ public class MainActivity extends AppCompatActivity {
         ProgressTracker tracker = new ProgressTracker(MainActivity.this);
         tracker.clearProgress();
 
-        // Launch progress activity
+        // Launch progress activity with extraction path
         Intent intent = new Intent(this, ProgressActivity.class);
-        startActivity(intent);
+        intent.putExtra("EXTRACT_PATH", extractDirPath);
+        progressActivityLauncher.launch(intent);
 
         executorService.execute(() -> {
             try {
@@ -748,8 +771,9 @@ public class MainActivity extends AppCompatActivity {
         ProgressTracker tracker = new ProgressTracker(MainActivity.this);
         tracker.clearProgress();
 
-        // Launch progress activity
+        // Launch progress activity with source path
         Intent intent = new Intent(this, ProgressActivity.class);
+        intent.putExtra("DECOMPILE_PATH", sourceDirPath);
         startActivity(intent);
 
         executorService.execute(() -> {
@@ -933,6 +957,24 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Later", null)
                 .show();
+    }
+
+    private void startEditRpyFlow() {
+        // Launch file picker to browse for .rpy files
+        Intent intent = new Intent(this, FilePickerActivity.class);
+        intent.putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_FILE);
+        intent.putExtra(FilePickerActivity.EXTRA_FILE_FILTER, ".rpy");
+        intent.putExtra(FilePickerActivity.EXTRA_TITLE, "Select .rpy File to Edit");
+        intent.putExtra("OPEN_EDITOR", true);  // Flag to open editor directly
+
+        // Restore last folder location if available
+        android.content.SharedPreferences prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE);
+        String lastFolder = prefs.getString("last_rpy_edit_folder", null);
+        if (lastFolder != null) {
+            intent.putExtra(FilePickerActivity.EXTRA_START_DIR, lastFolder);
+        }
+
+        startActivity(intent);
     }
 
     @Override
