@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 100;
 
     private MaterialCardView cardExtract, cardCreate, cardDecompile, cardEditRpy;
-    private TextView tvExtractStatus, tvCreateStatus, tvDecompileStatus;
+    private TextView tvExtractStatus, tvCreateStatus, tvDecompileStatus, tvEditStatus;
 
     private Python python;
     private PyObject rpaModule;
@@ -89,6 +89,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Check for updates
         checkForUpdates();
+
+        // Update edit status
+        updateEditStatus();
     }
 
     private void initViews() {
@@ -99,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
         tvExtractStatus = findViewById(R.id.tv_extract_status);
         tvCreateStatus = findViewById(R.id.tv_create_status);
         tvDecompileStatus = findViewById(R.id.tv_decompile_status);
+        tvEditStatus = findViewById(R.id.tv_edit_status);
 
         // Set up click listeners
         cardExtract.setOnClickListener(v -> startExtractFlow());
@@ -975,6 +979,29 @@ public class MainActivity extends AppCompatActivity {
         }
 
         startActivity(intent);
+    }
+
+    private void updateEditStatus() {
+        android.content.SharedPreferences prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE);
+        String lastFilePath = prefs.getString("last_rpy_edit_file", null);
+
+        if (lastFilePath != null) {
+            java.io.File file = new java.io.File(lastFilePath);
+            if (file.exists()) {
+                tvEditStatus.setText("Last edited: " + file.getName());
+            } else {
+                tvEditStatus.setText("No files edited yet");
+            }
+        } else {
+            tvEditStatus.setText("No files edited yet");
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Update edit status when returning from editor
+        updateEditStatus();
     }
 
     @Override

@@ -1,0 +1,28 @@
+{
+  "comments": {
+    "lineComment": "#"
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    { "open": "{", "close": "}" },
+    { "open": "[", "close": "]" },
+    { "open": "(", "close": ")" },
+    { "open": "\"", "close": "\"", "notIn": ["string"] },
+    { "open": "'", "close": "'", "notIn": ["string", "comment"] }
+  ],
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["\"", "\""],
+    ["'", "'"]
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(label|menu|if|elif|else|while|for|def|class|python|init python|screen|style|transform)\\b.*:\\s*$",
+    "decreaseIndentPattern": "^\\s*(elif|else)\\b.*:\\s*$"
+  }
+}

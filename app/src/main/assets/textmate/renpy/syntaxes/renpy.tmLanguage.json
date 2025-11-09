@@ -1,0 +1,424 @@
+{
+    "bundleUUID": "0F24FCF1-6543-4CC6-8B33-2EAED401FE3D", 
+    "foldingStopMarker": "^\\s*$|^\\s*\\}|^\\s*\\]|^\\s*\\)|^\\s*\"\"\"\\s*$", 
+    "firstLineMatch": "^#!/.*\\bpython[0-9.-]*\\b", 
+    "fileTypes": [
+        "rpy", 
+        "rpym"
+    ], 
+    "scopeName": "source.renpy", 
+    "keyEquivalent": "^~P", 
+    "name": "RenpyLanguage", 
+    "comment": "To make RenpyLanguage the default for Renpy files, open a .rpy file and select View|Syntax|Open all with current extension as...|RenpyLanguage.", 
+    "patterns": [
+
+        {
+            "begin": "^(\\h*)(label)(\\s+)(\\.?\\w+)((\\s*)(\\(.*\\))(\\s*))?:",
+            "beginCaptures":{
+                "2":{"name":"keyword.control.flow.renpy"},
+                "4":{"name":"variable.renpy"}
+            },
+            "patterns": [
+                {"include": "#string_quoted_triple"},
+                {"include": "#string_quoted_single"},
+                {"include": "#string_quoted_double"},
+                {"include": "#string_quoted_backtick"},
+                {"include": "#transform"},
+                {"include": "#ingame"},
+                {"include": "#python_block"},
+                {"include": "#python_line"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy.ingame"
+        },
+
+        {
+            "begin": "^(\\h*)(screen)(\\s+)(\\w+)(\\s*)(\\(.*\\))?(\\s*):",
+            "beginCaptures":{
+                "2":{"name":"keyword.control.flow.renpy"},
+                "4":{"name":"variable.renpy"}
+            },
+            "patterns": [
+                {
+                    "begin":"^(\\s*)(imagemap)(\\s*):",
+                    "beginCaptures":{
+                        "2":{"name":"keyword.control.flow.renpy"}
+                    },
+                    "patterns": [{"include": "#imagemap"}],
+                    "end": "^(?!(\\1\\s+|\\s*#.*$))"
+                },
+                {"include": "#transform"},
+                {"include": "#screen"},
+                {"include": "#python_block"},
+                {"include": "#python_line"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy.screen"
+        },
+
+        {"include":"#style"},
+
+        {
+            "begin": "^(\\s*)(layeredimage)(\\s+\\w+)+:",
+            "beginCaptures":{
+                "2":{"name":"keyword.control.flow.renpy"},
+                "3":{"name":"variable.renpy"}
+            },
+            "patterns": [
+                {"include": "#layeredimage"},
+                {"include": "#atl"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy.layeredimage"
+        },
+
+        {"include":"#transform"},
+
+        {"include": "#python_block"},
+
+        {
+            "begin": "^(\\h*)init(\\s+)((\\+|\\-)?\\d+\\s+)?python((\\s+)(\\w*))?:(\\s*)$",
+            "beginCaptures":{
+                "0":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include": "#python"},
+                {"include": "#python_init"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy.python.init"
+        },
+
+        {
+            "begin": "^(\\h*)(init)(\\s+(\\+|\\-)?\\d+)?(\\s+\\w*)?\\s*:\\s*$",
+            "beginCaptures":{
+                "0":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include":"#python_block_init"},
+                {"include":"#python_line_init"},
+                {"include":"#transform"},
+                {"include":"#define"},
+                {"include":"#default"},
+                {"include":"#style"},
+                {"include":"#layeredimage"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy"
+        },
+
+        {"include": "#define"},
+
+        {"include": "#default"},
+
+        {"include": "#source_python"}
+    ],
+
+    "repository": {
+        "source_python":{
+            "comment": "Context for python statements + Renpy autocompletes",
+            "name": "source.renpy.python",
+            "patterns": [
+                {
+                    "include": "source.python.compat"
+                }
+            ]
+        },
+        "default":{
+            "comment": "Default context",
+            "match": "\\b(transform|image)\\b",
+            "name":"keyword.control.flow.renpy",
+            "patterns": [
+                {
+                    "begin": "^(((\\s)*(\\w)+)(\\s)+)+=",
+                    "patterns": [
+                        {
+                            "include":"#python"
+                        }
+                    ]
+                }
+            ]
+        },
+        "string_quoted_triple":{
+            "begin": "(?<!\\\\)\"\"\"",
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)",
+                    "name": "constant.character.escape.backslash.regex.python"
+                },{
+                    "match": "\\{(.*?)\\}",
+                    "name": "constant.character.escape.backslash.regex.python"
+                }
+            ],
+            "end": "(?<!\\\\)\"\"\"",
+            "name": "string.quoted.triple.triple-line.python.renpy"
+        },
+        "string_quoted_single":{
+            "begin": "(?<!\\\\)'",
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)",
+                    "name": "constant.character.escape.backslash.regex.python"
+                },{
+                    "match": "\\{(.*?)\\}",
+                    "name": "constant.character.escape.backslash.regex.python"
+                }
+            ],
+            "end": "(?<!\\\\)'",
+            "name": "string.quoted.single.single-line.python.renpy"
+        },
+        "string_quoted_double":{
+            "begin": "(?<!\\\\)\"",
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)",
+                    "name": "constant.character.escape.backslash.regex.python"
+                },{
+                    "match": "\\{(.*?)\\}",
+                    "name": "constant.character.escape.backslash.regex.python"
+                }
+            ],
+            "end": "(?<!\\\\)\"",
+            "name": "string.quoted.double.single-line.python.renpy"
+        },
+        "string_quoted_backtick":{
+            "begin": "(?<!\\\\)`",
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)",
+                    "name": "constant.character.escape.backslash.regex.python"
+                },{
+                    "match": "\\{(.*?)\\}",
+                    "name": "constant.character.escape.backslash.regex.python"
+                }
+            ],
+            "end": "(?<!\\\\)`",
+            "name": "string.quoted.single.single-line.python.renpy"
+        },
+        "atl":{
+            "comment": "ATL transform and UI element properties", 
+            "patterns": [
+                {
+                    "match": "\\b(insensitive_|idle_|hover_|selected_|selected_idle_|selected_hover_)?(alt|xpos|ypos|pos|xanchor|yanchor|anchor|xalign|yalign|align|xcenter|ycenter|xoffset|yoffset|xmaximum|ymaximum|maximum|xminimum|yminimum|minimum|xsize|ysize|xysize|xfill|yfill|area|antialias|adjust_spacing|black_color|bold|caret|color|first_indent|font|size|italic|justify|kerning|language|layout|line_leading|line_overlap_split|line_spacing|min_width|newline_indent|outlines|rest_indent|ruby_style|slow_cps|slow_cps_multiplier|strikethrough|text_align|underline|hyperlink_functions|vertical|hinting|background|foreground|left_margin|right_margin|xmargin|top_margin|bottom_margin|ymargin|left_padding|right_padding|xpadding|top_padding|bottom_padding|ypadding|size_group|child|hover_sound|activate_sound|mouse|focus_mask|keyboard_focus|bar_vertical|bar_invert|bar_resizing|left_gutter|right_gutter|top_gutter|bottom_gutter|left_bar|right_bar|top_bar|bottom_bar|thumb|thumb_shadow|thumb_offset|mouse|unscrollable|keyboard_focus|spacing|first_spacing|box_reverse|box_wrap|order_reverse|selected|sensitive|keysym|alternate_keysym|arrowkeys|mousewheel|padding|properties|scrollbars|draggable|side_xfill|side_yfill|xadjustment|yadjustment|scrollbar_thumb|transclude|rows|cols|xinitial|yinitial|base_bar)\\b",
+                    "name": "variable.parameter.renpy"
+                },
+                {
+                    "match": "\\b(alpha|linear)\\b",
+                    "name": "variable.parameter.renpy"
+                }
+            ]
+        },
+        "ingame":{
+            "comment": "Renpy label block",
+            "match": "\\b(as|at|behind|onlayer|zorder|show|expression|scene|hide|with|window|call|jump|stop|pause|play|menu)\\b", 
+            "name": "keyword.control.flow.renpy"
+        },
+        "transform":{
+            "comment": "ATL blocks",
+            "patterns": [ 
+                {
+                    "begin": "^(\\h*)(transform|image|scene|show)(\\s+\\w+)+(\\s*(\\(.*\\)))?\\s*:\\s*$",
+                    "beginCaptures":{
+                        "2":{"name":"keyword.control.flow.renpy"},
+                        "5":{"name":"variable.renpy"}
+                    },
+                    "patterns": [
+                        {"include": "#atl"},
+                        {"include": "#source_python"}
+                    ],
+                    "end": "^(?!(\\1\\s+|\\s*#.*$))",
+                    "name": "source.renpy.transform"
+                }
+            ]
+        },
+
+        "style": {
+            "patterns": [
+                {
+                    "begin": "^(\\s*)(style)(\\s+\\w+)((\\s+)(is)(\\s+)(\\w+))?(\\s*):",
+                    "beginCaptures":{
+                        "2":{"name":"keyword.control.flow.renpy"},
+                        "3":{"name":"variable.renpy"},
+                        "6":{"name":"keyword.control.flow.renpy"},
+                        "8":{"name":"variable.renpy"}
+                    },
+                    "patterns": [
+                        {"include": "#atl"},
+                        {"include": "#source_python"}
+                    ],
+                    "end": "^(?!(\\1\\s+|\\s*#.*$))",
+                    "name": "source.renpy.atl"
+                },
+                {
+                    "begin": "^(\\s*)(style)(\\s+\\w+)(\\s+)(is)(\\s+)(\\w+)",
+                    "beginCaptures":{
+                        "2":{"name":"keyword.control.flow.renpy"},
+                        "3":{"name":"variable.renpy"},
+                        "5":{"name":"keyword.control.flow.renpy"},
+                        "7":{"name":"variable.renpy"}
+                    },
+                    "patterns": [
+                        {"include": "#atl"},
+                        {"include": "#source_python"}
+                    ],
+                    "end": "^(?!(\\1\\s+|\\s*#.*$))",
+                    "name": "source.renpy.atl"
+                }
+            ]
+        },
+
+        "layeredimage": {
+            "comment": "LayeredImage properties", 
+            "patterns": [
+                {
+                    "match": "\\b(group|always|attribute)\\b",
+                    "name": "keyword.control.flow.renpy"
+                },
+                {
+                    "match": "\\b(auto|if_all|if_any|if_not|default)\\b",
+                    "name": "variable.parameter.renpy"
+                }
+            ]
+        },
+
+        "screen": {
+            "patterns": [
+                {
+                    "include":"#atl"
+                },
+                {
+                    "comment": "common properties - http://www.renpy.org/doc/html/screens.html#common-properties", 
+                    "match": "\\b(at|default|id|style|focus)\\b", 
+                    "name": "keyword.control.flow.renpy"
+                },
+                {
+                    "comment": "renpy keywords", 
+                    "match": "\\b(add|audio|bar|behind|block|button|choice|circles|clear|clockwise|config|contains|counterclockwise|define|dissolve|ease|easein|easeinright|easeinleft|easeintop|easeinbottom|easeout|easeoutright|easeoutleft|easeouttop|easeoutbottom|event|expression|fade|fadein|fadeout|fixed|frame|function|grid|has|hbox|hotbar|hotspot|hpunch|image|imagebutton|imagemap|init|irisin|jump|key|key_event|knot|label|menu|modal|move|moveinright|moveinleft|moveintop|moveinbottom|moveoutright|moveoutleft|moveouttop|moveoutbottom|movie|music|null|nvl|on|parallel|pixellate|position|python|queue|renpy|repeat|screen|side|slideleft|slideright|slideup|slidedown|slideawayleft|slideawayright|slideawayup|slideawaydown|sound|squares|store|style_group|style_prefix|style_suffix|tag|text|textbutton|time|timer|transform|translate|ui|use|value|variant|vbar|vbox|viewport|voice|vpgrid|vpunch|window|wipeleft|wiperight|wipeup|wipedown|zoomin|zoomout|zoominout|zorder)\\b", 
+                    "name": "keyword.control.flow.renpy"
+                },
+                {
+                    "comment": "ATL arguments  variable.parameter.function.language.renpy", 
+                    "match": "\\b(action|style|unhovered|hovered)\\b", 
+                    "name": "variable.parameter.renpy"
+                },
+                {
+                    "comment": "renpy methods", 
+                    "match": "\\b(Action|AnimatedValue|At|Character|DictValue|DisableAllInputValues|Dissolve|DynamicCharacter|EndReplay|Fade|FileAction|FileDelete|FileLoad|FilePage|FilePageNext|FilePagePrevious|FileSave|FileTakeScreenshot|Function|FileCurrentPage|FileCurrentScreenshot|FileJson|FileLoadable|FileNewest|FilePageName|FileSaveName|FileScreenshot|FileSlotName|FileTime|FileUsedSlots|FieldValue|Help|Hide|HideInterface|If|InvertSelected|Jump|LiveComposite|LiveCrop|MainMenu|MixerValue|MouseMove|Movie|Notify|NullAction|OpenURL|Pause|Play|Position|Preference|Queue|QuickLoad|QuickSave|Quit|Replay|Return|Rollback|RollForward|Screenshot|SelectedIf|SensitiveIf|SetDict|SetField|SetMixer|SetScreenVariable|SetVariable|ShowMenu|ShowTransient|SideImage|Skip|Start|StaticValue|Stop|Text|ToggleDict|ToggleField|ToggleScreenVariable|Tooltip|ToggleVariable|Transform|VariableValue|With|XScrollValue|YScrollValue|Start|Hide|Show)\\b", 
+                    "name": "support.function.renpy"
+                }
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))", 
+            "name": "source.renpy.screen"
+        },
+
+        "imagemap": {
+            "patterns": [
+                {
+                   "match": "\\b(auto|ground|insensitive|idle|hover|selected_idle|selected_hover|alpha|cache)\\b",
+                   "name": "variable.parameter.renpy"
+                },
+                {"include": "#screen"},
+                {"include": "#source_python"}
+            ]
+        },
+
+        "define":{
+            "begin": "^(\\s*)(define|default)(\\s+)",
+            "beginCaptures": {
+                "2":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include": "#python"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\n))",
+            "name":"source.renpy.python"
+        },
+
+        "python": {
+            "comment": "Renpy python variables",
+            "match": "(\\h*)((renpy|config|achievement|persistent|preferences|gui|build)\\.)(\\w+)",
+            "name":"keyword.control.flow.renpy",
+            "captures": {
+                "3":{"name":"keyword.control.flow.renpy"},
+                "4":{"name":"variable.renpy"}
+            }
+        },
+
+        "python_init": {
+            "comment": "Renpy python init variables",
+            "match": "(\\h*)((style|theme)\\.)(\\w+)",
+            "name":"keyword.control.flow.renpy",
+            "captures": {
+                "3":{"name":"keyword.control.flow.renpy"},
+                "4":{"name":"variable.renpy"}
+            }
+        },
+
+        "python_block": {
+            "begin": "^(\\s*)python(\\s+\\w+)?(\\s*):",
+            "beginCaptures":{
+                "0":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include": "#python"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy.python"
+        },
+
+        "python_line": {
+            "begin": "^(\\s*)(\\$)",
+            "beginCaptures": {
+                "2":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include": "#python"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\n))",
+            "name":"source.renpy.python"
+        },
+
+        "python_block_init": {
+            "begin": "^(\\s*)python(\\s+\\w+)?(\\s*):",
+            "beginCaptures":{
+                "0":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include": "#python"},
+                {"include": "#python_init"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\\1\\s+|\\s*#.*$))",
+            "name": "source.renpy.python.init"
+        },
+
+        "python_line_init": {
+            "begin": "^(\\s*)(\\$)",
+            "beginCaptures": {
+                "2":{"name":"keyword.control.flow.renpy"}
+            },
+            "patterns": [
+                {"include": "#python"},
+                {"include": "#python_init"},
+                {"include": "#source_python"}
+            ],
+            "end": "^(?!(\n))",
+            "name":"source.renpy.python.init"
+        }
+
+
+
+    },
+
+    "foldingStartMarker": "^\\s*(def|class)\\s+([.a-zA-Z0-9_ <]+)\\s*(\\((.*)\\))?\\s*:|\\{\\s*$|\\(\\s*$|\\[\\s*$|^\\s*\"\"\"(?=.)(?!.*\"\"\")", 
+    "author": "Koroshiya", 
+    "uuid": "11B0273F-0284-4483-B17B-4B8D0A9294CD"
+}

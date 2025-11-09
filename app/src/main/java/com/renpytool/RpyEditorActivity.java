@@ -1,7 +1,6 @@
 package com.renpytool;
 
 import android.os.Bundle;
-import android.util.TypedValue;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +16,14 @@ import java.io.IOException;
 
 import io.github.rosemoe.sora.widget.CodeEditor;
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme;
+import io.github.rosemoe.sora.langs.textmate.TextMateLanguage;
+import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme;
+import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry;
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry;
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry;
+import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel;
+import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver;
+import org.eclipse.tm4e.core.registry.IThemeSource;
 
 /**
  * Activity for viewing and editing .rpy (Ren'Py script) files
@@ -56,11 +63,17 @@ public class RpyEditorActivity extends AppCompatActivity {
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
-        // Configure editor
+        // Initialize TextMate (one-time setup)
+        initializeTextMate();
+
+        // Configure editor (colors and basic settings only)
         configureEditor();
 
-        // Load file content
+        // Load file content FIRST
         loadFile();
+
+        // Apply syntax highlighting with custom theme AFTER content is loaded
+        applySyntaxHighlighting();
 
         // Setup save button
         fabSave.setOnClickListener(v -> saveFile());
@@ -72,37 +85,67 @@ public class RpyEditorActivity extends AppCompatActivity {
     }
 
     /**
-     * Configure the Sora Editor with Material 3 colors
+     * Initialize TextMate language system with theme (one-time setup)
+     */
+    private void initializeTextMate() {
+        try {
+            // Register assets file provider
+            FileProviderRegistry.getInstance().addFileProvider(
+                new AssetsFileResolver(getApplicationContext().getAssets())
+            );
+
+            // Load Ren'Py grammar from assets
+            GrammarRegistry.getInstance().loadGrammars("textmate/languages.json");
+
+            // Load our custom dark theme
+            String themeName = "renpy-dark";
+            String themeAssetsPath = "textmate/renpy-dark-theme.json";
+            ThemeModel themeModel = new ThemeModel(
+                IThemeSource.fromInputStream(
+                    FileProviderRegistry.getInstance().tryGetInputStream(themeAssetsPath),
+                    themeAssetsPath,
+                    null
+                ),
+                themeName
+            );
+            themeModel.setDark(true);
+            ThemeRegistry.getInstance().loadTheme(themeModel);
+            ThemeRegistry.getInstance().setTheme(themeName);
+        } catch (Exception e) {
+            Toast.makeText(this, "Error loading syntax highlighting: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Configure the Sora Editor with basic settings
+     * Color scheme is applied by TextMateColorScheme after language setup
      */
     private void configureEditor() {
-        // Apply Material 3 colors to editor
-        EditorColorScheme scheme = editor.getColorScheme();
-
-        // Get Material 3 colors from theme
-        TypedValue typedValue = new TypedValue();
-
-        // Background
-        getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true);
-        scheme.setColor(EditorColorScheme.WHOLE_BACKGROUND, typedValue.data);
-        scheme.setColor(EditorColorScheme.LINE_NUMBER_BACKGROUND, typedValue.data);
-
-        // Text
-        getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
-        scheme.setColor(EditorColorScheme.TEXT_NORMAL, typedValue.data);
-        scheme.setColor(EditorColorScheme.LINE_NUMBER, typedValue.data);
-
-        // Current line
-        getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true);
-        scheme.setColor(EditorColorScheme.CURRENT_LINE, typedValue.data);
-
-        // Selection
-        getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
-        scheme.setColor(EditorColorScheme.SELECTED_TEXT_BACKGROUND, typedValue.data);
-
         // Enable basic features
         editor.setLineNumberEnabled(true);
         editor.setWordwrap(false);
         editor.setTypefaceText(android.graphics.Typeface.MONOSPACE);
+    }
+
+    /**
+     * Apply Ren'Py syntax highlighting to the editor
+     * Must be called AFTER file content is loaded
+     */
+    private void applySyntaxHighlighting() {
+        try {
+            // Create TextMate language for Ren'Py
+            TextMateLanguage language = TextMateLanguage.create("source.renpy", true);
+            editor.setEditorLanguage(language);
+
+            // Apply TextMate color scheme for proper syntax highlighting
+            editor.setColorScheme(TextMateColorScheme.create(ThemeRegistry.getInstance()));
+        } catch (Exception e) {
+            Toast.makeText(this, "Error applying syntax highlighting: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -130,12 +173,16 @@ public class RpyEditorActivity extends AppCompatActivity {
             editor.setText(content.toString());
             isModified = false;
 
-            // Save the parent folder location for future use
+            // Save the parent folder location and file path for future use
             File parentDir = file.getParentFile();
+            android.content.SharedPreferences prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE);
+            android.content.SharedPreferences.Editor prefsEditor = prefs.edit();
+
             if (parentDir != null) {
-                android.content.SharedPreferences prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE);
-                prefs.edit().putString("last_rpy_edit_folder", parentDir.getAbsolutePath()).apply();
+                prefsEditor.putString("last_rpy_edit_folder", parentDir.getAbsolutePath());
             }
+            prefsEditor.putString("last_rpy_edit_file", file.getAbsolutePath());
+            prefsEditor.apply();
 
         } catch (IOException e) {
             Toast.makeText(this, "Error loading file: " + e.getMessage(),

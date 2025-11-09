@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/renpy/syntaxes/renpy.tmLanguage.json",
+      "name": "renpy",
+      "scopeName": "source.renpy",
+      "languageConfiguration": "textmate/renpy/language-configuration.json"
+    }
+  ]
+}
