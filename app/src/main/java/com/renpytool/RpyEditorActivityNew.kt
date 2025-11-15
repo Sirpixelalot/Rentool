@@ -70,6 +70,9 @@ class RpyEditorActivityNew : AppCompatActivity() {
                     codeEditor.setText(Content(newText))
                 }
             }
+
+            // Save last edited file location to SharedPreferences
+            saveLastEditedFile(filePath)
         }
 
         setContent {
@@ -171,5 +174,25 @@ class RpyEditorActivityNew : AppCompatActivity() {
         } else {
             super.onBackPressed()
         }
+    }
+
+    /**
+     * Save the last edited file path to SharedPreferences
+     * This allows the main screen to show the last edited file
+     * and the file picker to remember the last location
+     */
+    private fun saveLastEditedFile(filePath: String) {
+        val file = java.io.File(filePath)
+        val prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE)
+        val editor = prefs.edit()
+
+        // Save parent folder if it exists
+        file.parentFile?.let { parentDir ->
+            editor.putString("last_rpy_edit_folder", parentDir.absolutePath)
+        }
+
+        // Save file path
+        editor.putString("last_rpy_edit_file", file.absolutePath)
+        editor.apply()
     }
 }
