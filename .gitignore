@@ -38,3 +38,9 @@ keystore.properties
 git token.txt
 *.kate-swp
 .*.swp
+
+# Build logs and spec files
+build_output.txt
+build_with_pillow.log
+pillow_build.log
+renpy compressor spec sheet.txt
