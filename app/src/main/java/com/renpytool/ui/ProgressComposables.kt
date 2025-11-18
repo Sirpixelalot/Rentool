@@ -9,8 +9,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.renpytool.ProgressData
 import com.renpytool.viewmodel.ProgressUiState
 import java.util.Locale
+
+/**
+ * Format bytes to human-readable string
+ */
+private fun formatBytes(bytes: Long): String = ProgressData.formatFileSize(bytes)
 
 /**
  * Main progress screen showing real-time operation progress
@@ -88,6 +94,34 @@ fun ProgressScreen(
                 label = "ETA:",
                 value = uiState.eta
             )
+
+            // Compression-specific stats
+            if (uiState.operation.startsWith("compress")) {
+                if (uiState.originalSizeBytes > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ProgressInfoRow(
+                        label = "Original Size:",
+                        value = formatBytes(uiState.originalSizeBytes)
+                    )
+
+                    ProgressInfoRow(
+                        label = "Compressed:",
+                        value = formatBytes(uiState.compressedSizeBytes)
+                    )
+
+                    if (uiState.compressedSizeBytes > 0) {
+                        val ratio = ((uiState.originalSizeBytes - uiState.compressedSizeBytes).toDouble()
+                            / uiState.originalSizeBytes * 100.0)
+                        ProgressInfoRow(
+                            label = "Reduction:",
+                            value = String.format(Locale.US, "%.1f%%", ratio)
+                        )
+                    }
+                }
+            }
         }
 
         // Completion dialogs
@@ -98,6 +132,14 @@ fun ProgressScreen(
                     extractPath = uiState.extractPath,
                     rpycCount = uiState.rpycCount,
                     onDecompileClick = onDecompileClick,
+                    onDoneClick = onDoneClick
+                )
+            } else if (uiState.operation.startsWith("compress")) {
+                CompressionSuccessDialog(
+                    totalFiles = uiState.totalFiles,
+                    elapsedMs = uiState.elapsedMs,
+                    originalSizeBytes = uiState.originalSizeBytes,
+                    compressedSizeBytes = uiState.compressedSizeBytes,
                     onDoneClick = onDoneClick
                 )
             } else {
@@ -134,7 +176,8 @@ private fun ProgressInfoRow(
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(80.dp)
+            modifier = Modifier.width(110.dp),
+            maxLines = 1
         )
         Text(
             text = value,
@@ -179,6 +222,66 @@ private fun ExtractCompletionDialog(
         dismissButton = {
             TextButton(onClick = onDoneClick) {
                 Text("Done")
+            }
+        }
+    )
+}
+
+@Composable
+private fun CompressionSuccessDialog(
+    totalFiles: Int,
+    elapsedMs: Long,
+    originalSizeBytes: Long,
+    compressedSizeBytes: Long,
+    onDoneClick: () -> Unit
+) {
+    val reductionPercent = if (originalSizeBytes > 0) {
+        ((originalSizeBytes - compressedSizeBytes).toDouble() / originalSizeBytes * 100.0)
+    } else {
+        0.0
+    }
+
+    AlertDialog(
+        onDismissRequest = { },
+        title = {
+            Text("Compression Complete!")
+        },
+        text = {
+            Column {
+                Text(
+                    String.format(
+                        Locale.US,
+                        "Successfully compressed %d files in %s",
+                        totalFiles,
+                        formatTime(elapsedMs)
+                    ),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Original Size: ${formatBytes(originalSizeBytes)}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Compressed Size: ${formatBytes(compressedSizeBytes)}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    String.format(Locale.US, "Reduction: %.1f%%", reductionPercent),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDoneClick) {
+                Text("OK")
             }
         }
     )

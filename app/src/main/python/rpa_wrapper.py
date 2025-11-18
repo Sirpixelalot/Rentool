@@ -21,7 +21,7 @@ def _write_progress(progress_file, data):
         pass  # Fail silently - don't crash if progress file write fails
 
 
-def extract_rpa(rpa_file_path, output_dir, progress_file=None):
+def extract_rpa(rpa_file_path, output_dir, progress_file=None, batch_index=0, batch_total=0, batch_filename=''):
     """
     Extract all files from an RPA archive
 
@@ -29,6 +29,9 @@ def extract_rpa(rpa_file_path, output_dir, progress_file=None):
         rpa_file_path: Path to the .rpa file
         output_dir: Directory to extract files to
         progress_file: Optional path to write progress JSON updates
+        batch_index: Current file index in batch (0 = no batch)
+        batch_total: Total files in batch (0 = no batch)
+        batch_filename: Name of current file being processed
 
     Returns:
         dict with 'success' (bool), 'message' (str), and 'files' (list)
@@ -53,7 +56,10 @@ def extract_rpa(rpa_file_path, output_dir, progress_file=None):
                 'startTime': int(start_time * 1000),
                 'lastUpdateTime': int(time.time() * 1000),
                 'status': 'in_progress',
-                'errorMessage': ''
+                'errorMessage': '',
+                'currentBatchIndex': batch_index,
+                'totalBatchCount': batch_total,
+                'currentBatchFileName': batch_filename
             })
 
         # Create output directory if it doesn't exist
@@ -88,7 +94,10 @@ def extract_rpa(rpa_file_path, output_dir, progress_file=None):
                         'startTime': int(start_time * 1000),
                         'lastUpdateTime': int(time.time() * 1000),
                         'status': 'in_progress',
-                        'errorMessage': ''
+                        'errorMessage': '',
+                        'currentBatchIndex': batch_index,
+                        'totalBatchCount': batch_total,
+                        'currentBatchFileName': batch_filename
                     })
 
             except Exception as e:
@@ -103,7 +112,10 @@ def extract_rpa(rpa_file_path, output_dir, progress_file=None):
                         'startTime': int(start_time * 1000),
                         'lastUpdateTime': int(time.time() * 1000),
                         'status': 'failed',
-                        'errorMessage': error_msg
+                        'errorMessage': error_msg,
+                        'currentBatchIndex': batch_index,
+                        'totalBatchCount': batch_total,
+                        'currentBatchFileName': batch_filename
                     })
                 return dict(
                     success=False,
@@ -121,7 +133,10 @@ def extract_rpa(rpa_file_path, output_dir, progress_file=None):
                 'startTime': int(start_time * 1000),
                 'lastUpdateTime': int(time.time() * 1000),
                 'status': 'completed',
-                'errorMessage': ''
+                'errorMessage': '',
+                'currentBatchIndex': batch_index,
+                'totalBatchCount': batch_total,
+                'currentBatchFileName': batch_filename
             })
 
         return dict(
@@ -141,7 +156,10 @@ def extract_rpa(rpa_file_path, output_dir, progress_file=None):
                 'startTime': int(start_time * 1000),
                 'lastUpdateTime': int(time.time() * 1000),
                 'status': 'failed',
-                'errorMessage': error_msg
+                'errorMessage': error_msg,
+                'currentBatchIndex': batch_index,
+                'totalBatchCount': batch_total,
+                'currentBatchFileName': batch_filename
             })
         return dict(
             success=False,

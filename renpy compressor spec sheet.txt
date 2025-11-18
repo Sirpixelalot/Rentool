@@ -1,0 +1,201 @@
+  Alternative Compressor v0.5.0.2 - Technical Specification
+
+  Overview
+
+  A Windows batch script tool that compresses Ren'Py visual novel game assets to reduce file sizes while maintaining quality. Integrates UnRen functionality for RPA extraction and decompilation.
+
+  ---
+  Core Compression Techniques
+
+  1. Image Compression
+
+  - Primary Format: WebP (using cwebp.exe)
+  - Supported Input Formats: PNG, JPG, JPEG, BMP, WebP
+  - Key Parameters:
+    - Quality: User-selectable 1-100 (lossy) or lossless mode
+    - Compression Speed: 3 levels (fast/average/slow) mapped to -m values (3/4/6)
+    - Sharp YUV: Optional sharpening filter for crisper images
+    - Spatial Noise Shaping (SNS): 0-100 range for perceptual quality
+    - Additional flags: -alpha_filter fast -exact -pre 2 -hint photo
+  - Processing Method: Parallel processing using ppx2.exe (parallel executor) with user-defined thread count
+  - File Extension Preservation: Compressed files keep original extensions despite WebP conversion
+  - WebP Header Fix: Optional Python script to fix WebP headers for compatibility
+
+  Compression Command Template:
+  "%cwebp%" -quiet -q %quality% -m %icor% %llc% %sharpset% -sns %imgnoise%
+    -f %imgnoise% -alpha_filter fast -exact -pre 2 -hint photo "{input}" -o "{output}"
+
+  2. Audio Compression
+
+  - Output Format: Opus (in .ogg container)
+  - Supported Input Formats: MP3, WAV, OGG, OPUS, FLAC
+  - Codec: libopus via FFmpeg
+  - Quality Presets:
+    - High: 128kbps, compression level 6
+    - Medium: 48kbps, compression level 8
+    - Low: 24kbps, compression level 10
+    - Bad: 16kbps, compression level 10
+  - Features: VBR enabled, metadata stripped
+  - File Extension Preservation: Output keeps original extension (.mp3/.wav/etc) despite Opus conversion
+
+  Compression Command Template:
+  "%ffmpeg%" -i "input" -map_metadata -1 -codec:a libopus -vn -b:a %abr%
+    -loglevel warning -compression_level %acomp% -vbr on "output.temp.ogg"
+
+  3. Video Compression
+
+  - Output Format: WebM (VP9 video + Opus audio)
+  - Supported Input Formats: WebM, MP4, MKV, M4V, MPG, OGV, AVI, MOV, MPEG
+  - Video Codec: libvpx-vp9
+  - Quality Presets (CRF values):
+    - Premo: 30
+    - High: 38
+    - Medium: 45
+    - Low: 55
+  - Encoding Parameters:
+    - Variable framerate (VFR)
+    - Row-based multithreading
+    - Tile columns: 1
+    - Auto alternate reference frames
+    - Lag-in-frames: 25
+    - GOP size: 960
+  - Audio: Opus codec (same settings as audio compression)
+  - File Extension Preservation: Output keeps original extension despite WebM conversion
+
+  Compression Command Template:
+  "%ffmpeg%" -hide_banner -loglevel fatal -stats -hwaccel auto -i "input"
+    -c:v libvpx-vp9 -threads %threads2% -row-mt 1 -quality good -b:v 0
+    -crf %vqual% -tile-columns 1 -frame-parallel 1 -auto-alt-ref 1
+    -lag-in-frames 25 -g 960 -fps_mode vfr -c:a libopus -vbr on
+    -compression_level %acomp% -frame_duration 60 -application audio
+    -b:a %abr% -f webm "output.temp.filetype"
+
+  ---
+  Supporting Tools & Utilities
+
+  1. cwebp.exe: Google's WebP encoder
+  2. ppx2.exe: Parallel processing executor
+  3. nconvert.exe: Image format converter (for Android icon generation)
+  4. ffmpeg.exe: Audio/video transcoding
+  5. 7z.exe: Archive extraction (for Python portable)
+  6. Python 2.7/3.9: Script execution for RPA tools and utilities
+  7. rpatool.py: RPA archive extraction (version-specific)
+  8. unrpyc.py: RPyC decompilation
+  9. webp-header-fix.py: WebP header correction
+  10. PowerShell scripts: Non-ASCII filename handling
+
+  ---
+  Key Features & Workflow
+
+  RenPy Version Detection
+
+  - Auto-detects version from game/script_version.txt
+  - Supports: RenPy 7.4 and earlier, 7.5-7.8, 8.x+
+  - Uses appropriate Python version (2.7 for older, 3.9 for v8+)
+
+  Non-ASCII Filename Handling
+
+  - Problem: Windows compression tools fail on non-ASCII characters
+  - Solution:
+    a. PowerShell script renames files to ASCII-safe names before compression
+    b. Stores mapping in RenameList.csv
+    c. Restores original names after compression
+  - Scripts: non_ascii_killer.ps1 and non_ascii_reviver.ps1
+
+  Queue System
+
+  - Supports up to 16 concurrent game compressions
+  - Uses lock files in %temp%\complockN (N=1-16)
+  - Sequential queue processing to prevent resource exhaustion
+  - Optional parallel mode (legacy behavior)
+
+  Safety Mechanisms
+
+  1. Zero-byte detection: Reverts if compressed file is 0 bytes
+  2. File count validation: Warns if pre/post compression counts differ
+  3. Size comparison: Reports before/after compression sizes
+  4. Attribute removal: Removes read-only flag before processing
+  5. Temporary file system: Creates .temp.ext files, only replaces on success
+
+  RPA Archive Management
+
+  - Extract RPA archives using version-appropriate rpatool
+  - Optional RPA deletion after extraction
+  - RPA creation from compressed media (excludes /gui folder)
+  - Uses Python 3.9 and rpatool for packing
+
+  Android Icon Generation
+
+  - Converts gui/window_icon.png to Android format
+  - Resizes to 432x432, then centers on 512x512 canvas
+  - Outputs android-icon_foreground.png
+
+  Configuration Persistence
+
+  - Saves compression settings to SetComp.txt
+  - Stores: quality, threads, codec options, skip flags, etc.
+  - Allows quick re-compression with saved settings
+
+  ---
+  Process Flow
+
+  1. Initialization
+    - Check for PowerShell
+    - Validate path (no special characters)
+    - Detect RenPy version
+    - Extract portable Python if needed
+  2. Pre-Compression
+    - Count compressible files
+    - Collect user preferences (quality, threads, etc.)
+    - Handle non-ASCII filenames (rename to temp names)
+    - Optionally save settings
+  3. Compression
+    - Images: Parallel processing with cwebp
+    - Audio: Sequential per-file FFmpeg processing
+    - Video: Sequential per-file FFmpeg processing
+    - Each file: process → validate → replace original
+  4. Post-Compression
+    - Restore non-ASCII filenames
+    - Validate file counts
+    - Calculate size reduction
+    - Optional alarm notification
+  5. Optional Operations
+    - Delete RPA archives
+    - Create new archive.rpa from compressed media
+    - Generate Android icons
+
+  ---
+  Performance Optimizations
+
+  - Multi-threading: User-configurable thread count (defaults to CPU core count)
+  - Parallel image processing: Uses ppx2 to process multiple images simultaneously
+  - Sequential A/V processing: One file at a time to prevent I/O bottlenecks
+  - Queue system: Prevents system overload when compressing multiple games
+  - Delayed start option: Schedule compression for later (e.g., overnight)
+
+  ---
+  Additional UnRen Features
+
+  - Enable developer console (Shift+D) and debug console (Shift+O)
+  - Enable quick save (F5) and quick load (F9)
+  - Force enable content skipping (Tab/Ctrl)
+  - Force enable rollback (mouse wheel)
+  - Decompile .rpyc to .rpy files
+  - Find non-ASCII filenames for troubleshooting
+
+  ---
+  Technical Requirements
+
+  - OS: Windows 7+ (PowerShell required)
+  - Tools: All compression tools bundled in comptools/ directory
+  - Python: Portable versions (2.7/3.9) auto-extracted from .7z archives
+  - Game Structure: Expects game/ subfolder with Ren'Py structure
+
+  ---
+  File Size Calculation
+
+  - Measures byte size before and after compression
+  - Calculates reduction percentage
+  - Tracks processing time (hours:minutes:seconds)
+  - Reports statistics per media type
+

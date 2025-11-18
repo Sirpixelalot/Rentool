@@ -29,7 +29,10 @@ data class ProgressUiState(
     val rpycCount: Int = 0,
     val totalFiles: Int = 0,
     val elapsedMs: Long = 0,
-    val operation: String = ""
+    val operation: String = "",
+    // Compression-specific fields
+    val originalSizeBytes: Long = 0,
+    val compressedSizeBytes: Long = 0
 )
 
 class ProgressViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,7 +47,6 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
     private var batchTotal = 0
     private var batchFileNames: List<String>? = null
     private var currentBatchIndex = 1
-    private var lastStatus = "in_progress"
 
     private companion object {
         const val POLL_INTERVAL_MS = 500L
@@ -59,6 +61,7 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
         isBatchMode = batchMode
         this.batchTotal = batchTotal
         batchFileNames = batchFiles
+        currentBatchIndex = 1
         startProgressPolling(extractPath)
     }
 
@@ -82,14 +85,9 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun updateUiState(data: ProgressData, extractPath: String?) {
-        // Track batch progress independently
-        if (isBatchMode && batchTotal > 0) {
-            if ("completed" == data.status && "completed" != lastStatus) {
-                if (currentBatchIndex < batchTotal) {
-                    currentBatchIndex++
-                }
-            }
-            lastStatus = data.status
+        // Use batch index directly from ProgressData (Python now includes it)
+        if (isBatchMode && batchTotal > 0 && data.currentBatchIndex > 0) {
+            currentBatchIndex = data.currentBatchIndex
         }
 
         // Determine operation type
@@ -107,10 +105,14 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
             }
             data.operation == "extract" -> "Extracting RPA..."
             data.operation == "decompile" -> "Decompiling RPYC..."
+            data.operation == "compress_images" -> "Compressing Images..."
+            data.operation == "compress_audio" -> "Compressing Audio..."
+            data.operation == "compress_video" -> "Compressing Video..."
+            data.operation.startsWith("compress") -> "Compressing Game..."
             else -> "Creating RPA Archive..."
         }
 
-        // Add batch information
+        // Add batch information using our tracked counter
         if (isBatchMode && batchTotal > 0) {
             val batchInfo = String.format(Locale.US, " (%d of %d)", currentBatchIndex, batchTotal)
             operationType += batchInfo
@@ -164,7 +166,9 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
                 rpycCount = rpycCount,
                 totalFiles = data.totalFiles,
                 elapsedMs = data.getElapsedMs(),
-                operation = data.operation
+                operation = data.operation,
+                originalSizeBytes = data.originalSizeBytes,
+                compressedSizeBytes = data.compressedSizeBytes
             )
         }
     }

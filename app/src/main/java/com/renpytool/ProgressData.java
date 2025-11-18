@@ -18,6 +18,10 @@ public class ProgressData {
     public int totalBatchCount;        // Total items in batch (0 = no batch)
     public String currentBatchFileName; // Name of current batch file/folder
 
+    // Compression-specific fields
+    public long originalSizeBytes = 0;     // Original file size before compression
+    public long compressedSizeBytes = 0;   // Compressed file size
+
     // For smoothed ETA calculation
     private long lastEtaUpdateTime = 0;
     private long lastEtaValue = 0;
@@ -127,5 +131,30 @@ public class ProgressData {
      */
     public boolean isFailed() {
         return "failed".equals(status);
+    }
+
+    /**
+     * Get compression ratio as percentage
+     * Returns 0 if no compression data available
+     */
+    public double getCompressionRatio() {
+        if (originalSizeBytes == 0) return 0.0;
+        return ((originalSizeBytes - compressedSizeBytes) / (double) originalSizeBytes) * 100.0;
+    }
+
+    /**
+     * Format file size to human-readable string
+     * e.g., "1.5 MB", "342 KB", "52 bytes"
+     */
+    public static String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " bytes";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.1f KB", bytes / 1024.0);
+        } else if (bytes < 1024 * 1024 * 1024) {
+            return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        } else {
+            return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+        }
     }
 }

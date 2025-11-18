@@ -86,11 +86,13 @@ fun MainScreenContent(
     createStatus: String,
     decompileStatus: String,
     editStatus: String,
+    compressStatus: String,
     cardsEnabled: Boolean,
     onExtractClick: () -> Unit,
     onCreateClick: () -> Unit,
     onDecompileClick: () -> Unit,
     onEditClick: () -> Unit,
+    onCompressClick: () -> Unit,
     themeMode: com.renpytool.MainViewModel.ThemeMode,
     onThemeModeChange: (com.renpytool.MainViewModel.ThemeMode) -> Unit,
     modifier: Modifier = Modifier
@@ -155,6 +157,15 @@ fun MainScreenContent(
                 iconRes = com.renpytool.R.drawable.ic_edit_rpy,
                 enabled = cardsEnabled,
                 onClick = onEditClick
+            )
+
+            // Compress Game Card
+            OperationCard(
+                title = "Compress Game",
+                statusText = compressStatus,
+                iconRes = com.renpytool.R.drawable.ic_compress,
+                enabled = cardsEnabled,
+                onClick = onCompressClick
             )
         }
     }

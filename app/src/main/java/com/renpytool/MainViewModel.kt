@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.chaquo.python.PyObject
 import com.chaquo.python.Python
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +44,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _editStatus = MutableStateFlow("No files edited yet")
     val editStatus: StateFlow<String> = _editStatus.asStateFlow()
+
+    private val _compressStatus = MutableStateFlow("No games compressed yet")
+    val compressStatus: StateFlow<String> = _compressStatus.asStateFlow()
 
     // Cards enabled state
     private val _cardsEnabled = MutableStateFlow(true)
@@ -103,27 +107,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         val fileName = File(rpaFilePath).name
 
-                        // Update progress with batch info
-                        val batchProgress = ProgressData().apply {
-                            operation = "extract"
-                            currentBatchIndex = currentIndex
-                            totalBatchCount = totalFiles
-                            currentBatchFileName = fileName
-                            status = "in_progress"
-                            startTime = batchStartTime
-                            lastUpdateTime = System.currentTimeMillis()
-                            this.totalFiles = 0
-                            processedFiles = 0
-                            currentFile = "Starting extraction..."
-                        }
-                        tracker.writeProgress(batchProgress)
-
-                        // Call Python extraction
+                        // Call Python extraction with batch info
                         val result = rpaModule.callAttr(
                             "extract_rpa",
                             rpaFilePath,
                             extractDirPath,
-                            tracker.progressFilePath
+                            tracker.progressFilePath,
+                            currentIndex,
+                            totalFiles,
+                            fileName
                         )
 
                         if (result == null) {
@@ -550,6 +542,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         file.delete()
+    }
+
+    /**
+     * Perform game compression
+     */
+    fun performCompression(
+        sourceDirPath: String,
+        outputDirPath: String,
+        settings: CompressionSettings
+    ) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val tracker = ProgressTracker(context)
+                tracker.clearProgress()
+
+                try {
+                    // Initialize progress
+                    val initialData = ProgressData().apply {
+                        operation = "compress"
+                        status = "in_progress"
+                        startTime = System.currentTimeMillis()
+                        lastUpdateTime = System.currentTimeMillis()
+                        totalFiles = 0
+                        processedFiles = 0
+                        currentFile = "Scanning files..."
+                    }
+                    tracker.writeProgress(initialData)
+
+                    // Create compression manager and perform compression
+                    val compressionManager = CompressionManager(context)
+                    val result = compressionManager.compressGame(
+                        File(sourceDirPath),
+                        File(outputDirPath),
+                        settings,
+                        tracker
+                    )
+
+                    if (result.success) {
+                        val ratio = String.format("%.1f", result.reductionPercent)
+                        _compressStatus.value = "Compressed ${result.filesProcessed} files ($ratio% reduction)"
+                    } else {
+                        _compressStatus.value = "Compression failed: ${result.error ?: "Unknown error"}"
+                    }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+
+                    // Update progress with error
+                    try {
+                        val errorData = ProgressData().apply {
+                            operation = "compress"
+                            status = "failed"
+                            errorMessage = "Error: ${e.message}"
+                        }
+                        tracker.writeProgress(errorData)
+                    } catch (ex: Exception) {
+                        ex.printStackTrace()
+                    }
+
+                    _compressStatus.value = "Compression error: ${e.message}"
+                }
+            }
+        }
     }
 
     /**

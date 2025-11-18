@@ -29,6 +29,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
+import com.renpytool.ui.CompressionSettingsDialog
 import com.renpytool.ui.MainScreenContent
 import com.renpytool.ui.theme.RenpytoolTheme
 import java.io.File
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var extractDirPickerLauncher: ActivityResultLauncher<Intent>
     private lateinit var createSourcePickerLauncher: ActivityResultLauncher<Intent>
     private lateinit var decompileDirPickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var compressSourcePickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var compressOutputPickerLauncher: ActivityResultLauncher<Intent>
 
     // Progress activity launcher for chaining operations
     private lateinit var progressActivityLauncher: ActivityResultLauncher<Intent>
@@ -57,6 +60,8 @@ class MainActivity : ComponentActivity() {
     private var selectedRpaPaths: ArrayList<String>? = null  // For batch extraction
     private var selectedSourcePath: String? = null
     private var selectedSourcePaths: ArrayList<String>? = null  // For batch creation
+    private var selectedCompressSourcePath: String? = null
+    private var selectedCompressOutputPath: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +75,16 @@ class MainActivity : ComponentActivity() {
         initFilePickerLaunchers()
 
         // Set up Compose UI
+        setupMainUI()
+
+        // Check permissions
+        checkPermissions()
+
+        // Check for updates
+        checkForUpdates()
+    }
+
+    private fun setupMainUI() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
             val darkTheme = when (themeMode) {
@@ -82,12 +97,6 @@ class MainActivity : ComponentActivity() {
                 MainScreen()
             }
         }
-
-        // Check permissions
-        checkPermissions()
-
-        // Check for updates
-        checkForUpdates()
     }
 
     @Composable
@@ -97,6 +106,7 @@ class MainActivity : ComponentActivity() {
         val createStatus by viewModel.createStatus.collectAsState()
         val decompileStatus by viewModel.decompileStatus.collectAsState()
         val editStatus by viewModel.editStatus.collectAsState()
+        val compressStatus by viewModel.compressStatus.collectAsState()
         val cardsEnabled by viewModel.cardsEnabled.collectAsState()
         val themeMode by viewModel.themeMode.collectAsState()
 
@@ -105,11 +115,13 @@ class MainActivity : ComponentActivity() {
             createStatus = createStatus,
             decompileStatus = decompileStatus,
             editStatus = editStatus,
+            compressStatus = compressStatus,
             cardsEnabled = cardsEnabled,
             onExtractClick = { startExtractFlow() },
             onCreateClick = { startCreateFlow() },
             onDecompileClick = { startDecompileFlow() },
             onEditClick = { startEditRpyFlow() },
+            onCompressClick = { startCompressFlow() },
             themeMode = themeMode,
             onThemeModeChange = { mode -> viewModel.setThemeMode(mode) },
             modifier = Modifier.fillMaxSize()
@@ -285,6 +297,30 @@ class MainActivity : ComponentActivity() {
                     startActivity(intent)
                     viewModel.performDecompile(chainPath)
                 }
+            }
+        }
+
+        // Compress: Pick source directory
+        compressSourcePickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                selectedCompressSourcePath = result.data?.getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH)
+                // Use same folder - overwrite originals with compressed versions
+                selectedCompressOutputPath = selectedCompressSourcePath
+                // Show compression settings dialog
+                showCompressionSettingsDialog()
+            }
+        }
+
+        // Compress: Pick output directory
+        compressOutputPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                selectedCompressOutputPath = result.data?.getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH)
+                // Show compression settings dialog
+                showCompressionSettingsDialog()
             }
         }
     }
@@ -505,6 +541,65 @@ class MainActivity : ComponentActivity() {
         }
 
         startActivity(intent)
+    }
+
+    private fun startCompressFlow() {
+        // Launch file picker for game directory (source)
+        val intent = Intent(this, FilePickerActivity::class.java).apply {
+            putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_DIRECTORY)
+            putExtra(FilePickerActivity.EXTRA_TITLE, "Select Game Folder to Compress")
+        }
+        compressSourcePickerLauncher.launch(intent)
+    }
+
+    private fun launchCompressOutputPicker() {
+        val intent = Intent(this, FilePickerActivity::class.java).apply {
+            putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_DIRECTORY)
+            putExtra(FilePickerActivity.EXTRA_TITLE, "Select Output Folder")
+        }
+        compressOutputPickerLauncher.launch(intent)
+    }
+
+    private fun showCompressionSettingsDialog() {
+        val sourcePath = selectedCompressSourcePath
+        val outputPath = selectedCompressOutputPath
+
+        if (sourcePath == null || outputPath == null) {
+            Toast.makeText(this, "Error: Missing source or output path", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Load saved settings
+        val settings = CompressionSettings.load(this)
+
+        // Show settings dialog using Compose
+        setContent {
+            RenpytoolTheme(
+                darkTheme = when (viewModel.themeMode.value) {
+                    MainViewModel.ThemeMode.LIGHT -> false
+                    MainViewModel.ThemeMode.DARK -> true
+                    MainViewModel.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                }
+            ) {
+                CompressionSettingsDialog(
+                    initialSettings = settings,
+                    onConfirm = { newSettings ->
+                        // Save settings
+                        newSettings.save(this@MainActivity)
+                        // Start compression
+                        val intent = Intent(this@MainActivity, ProgressActivity::class.java)
+                        startActivity(intent)
+                        viewModel.performCompression(sourcePath, outputPath, newSettings)
+                        // Reset to main UI
+                        setupMainUI()
+                    },
+                    onDismiss = {
+                        // User cancelled, reset to main UI
+                        setupMainUI()
+                    }
+                )
+            }
+        }
     }
 
     override fun onResume() {

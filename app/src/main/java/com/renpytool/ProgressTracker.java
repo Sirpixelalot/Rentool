@@ -48,6 +48,10 @@ public class ProgressTracker {
         json.put("totalBatchCount", data.totalBatchCount);
         json.put("currentBatchFileName", data.currentBatchFileName != null ? data.currentBatchFileName : "");
 
+        // Compression fields
+        json.put("originalSizeBytes", data.originalSizeBytes);
+        json.put("compressedSizeBytes", data.compressedSizeBytes);
+
         try (FileOutputStream out = new FileOutputStream(progressFile)) {
             out.write(json.toString().getBytes());
         }
@@ -86,6 +90,10 @@ public class ProgressTracker {
             data.currentBatchIndex = json.optInt("currentBatchIndex", 0);
             data.totalBatchCount = json.optInt("totalBatchCount", 0);
             data.currentBatchFileName = json.optString("currentBatchFileName", "");
+
+            // Compression fields
+            data.originalSizeBytes = json.optLong("originalSizeBytes", 0);
+            data.compressedSizeBytes = json.optLong("compressedSizeBytes", 0);
 
             return data;
 

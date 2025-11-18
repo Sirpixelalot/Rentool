@@ -30,9 +30,10 @@ android {
         }
 
         python {
-            // Chaquopy will auto-detect Python installation
-            // If needed, uncomment and set your local Python path:
-            // buildPython "C:/Python314/python.exe"
+            // Use Python 3.8 for best Chaquopy compatibility
+            version "3.8"
+
+            // No longer need Pillow - using native Android Bitmap APIs for image compression
         }
     }
 
@@ -107,6 +108,11 @@ dependencies {
     implementation platform('io.github.rosemoe:editor-bom:0.23.7')
     implementation 'io.github.rosemoe:editor'
     implementation 'io.github.rosemoe:language-textmate'
+
+    // FFmpeg-Kit for audio/video compression (local AAR)
+    implementation files('libs/ffmpeg-kit-full-6.0-2.LTS.aar')
+    // FFmpeg-Kit dependencies
+    implementation 'com.arthenica:smart-exception-java:0.2.1'
 
     // Testing
     testImplementation libs.junit

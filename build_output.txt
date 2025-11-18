@@ -1,0 +1,65 @@
+> Task :app:clean
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:extractDebugPythonBuildPackages
+
+> Task :app:generateDebugPythonRequirements FAILED
+Chaquopy: Installing for arm64-v8a
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/__main__.py", line 32, in <module>
+    sys.exit(_main())
+             ~~~~~^^
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/_internal/cli/main.py", line 73, in main
+    command = create_command(cmd_name, isolated=("--isolated" in cmd_args))
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/_internal/commands/__init__.py", line 104, in create_command
+    module = importlib.import_module(module_path)
+  File "/usr/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/_internal/commands/install.py", line 24, in <module>
+    from pip._internal.cli.req_command import RequirementCommand, with_cleanup
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/_internal/cli/req_command.py", line 16, in <module>
+    from pip._internal.index.package_finder import PackageFinder
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/_internal/index/package_finder.py", line 21, in <module>
+    from pip._internal.index.collector import parse_links
+  File "/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/lib/python3.13/site-packages/pip/_internal/index/collector.py", line 5, in <module>
+    import cgi
+ModuleNotFoundError: No module named 'cgi'
+Chaquopy: Exit status 1
+
+[Incubating] Problems report is available at: file:///home/allen/AndroidStudioProjects/Renpytool/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:generateDebugPythonRequirements'.
+> Process 'command '/home/allen/AndroidStudioProjects/Renpytool/app/build/python/env/debug/bin/python'' finished with non-zero exit value 1 
+  
+  To view full details in Android Studio:
+  * Click the 'Build: failed' caption to the left of this message.
+  * Then scroll up to see the full output.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 3s
+3 actionable tasks: 3 executed
