@@ -127,7 +127,7 @@ class FilePickerActivity : ComponentActivity() {
         // Check if we should open the editor instead of returning
         val openEditor = intent.getBooleanExtra("OPEN_EDITOR", false)
 
-        if (openEditor && file.name.endsWith(".rpy")) {
+        if (openEditor && file.name.lowercase().endsWith(".rpy")) {
             // Open .rpy file in editor
             val editorIntent = Intent(this, RpyEditorActivityNew::class.java)
             editorIntent.putExtra(RpyEditorActivityNew.EXTRA_FILE_PATH, file.absolutePath)

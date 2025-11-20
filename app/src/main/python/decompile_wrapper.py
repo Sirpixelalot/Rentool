@@ -79,11 +79,12 @@ def decompile_directory(source_dir, progress_file=None):
                 stats=dict(total=0, success=0, skipped=0, failed=0)
             )
 
-        # First, recursively find all .rpyc files
+        # First, recursively find all .rpyc files (case-insensitive)
         rpyc_files = []
         for root, dirs, files in os.walk(source_dir):
             for file in files:
-                if file.endswith('.rpyc') or file.endswith('.rpymc'):
+                file_lower = file.lower()
+                if file_lower.endswith('.rpyc') or file_lower.endswith('.rpymc'):
                     rpyc_files.append(Path(os.path.join(root, file)))
 
         total_files = len(rpyc_files)

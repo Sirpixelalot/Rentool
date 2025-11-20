@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.renpytool.ProgressData
 import com.renpytool.ProgressTracker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 
@@ -66,11 +68,13 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun startProgressPolling(extractPath: String?) {
-        pollingJob = viewModelScope.launch {
+        pollingJob = viewModelScope.launch(Dispatchers.IO) {
             while (true) {
+                // Read progress on IO thread
                 val data = tracker.readProgress()
 
                 if (data != null) {
+                    // Update UI state (will switch to main thread internally)
                     updateUiState(data, extractPath)
 
                     if (data.isCompleted() || data.isFailed()) {
@@ -84,7 +88,7 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun updateUiState(data: ProgressData, extractPath: String?) {
+    private suspend fun updateUiState(data: ProgressData, extractPath: String?) {
         // Use batch index directly from ProgressData (Python now includes it)
         if (isBatchMode && batchTotal > 0 && data.currentBatchIndex > 0) {
             currentBatchIndex = data.currentBatchIndex
@@ -142,34 +146,38 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
-        // Handle completion
+        // Handle completion - count RPYC files on IO thread
         val isCompleted = data.isCompleted()
         val isFailed = data.isFailed()
         val rpycCount = if (isCompleted && "extract".equals(data.operation, ignoreCase = true) && extractPath != null) {
+            // Already on Dispatchers.IO, safe to do file I/O
             countRpycFiles(File(extractPath))
         } else {
             0
         }
 
-        _uiState.update {
-            ProgressUiState(
-                operationType = operationType,
-                percentage = percentage,
-                fileCount = fileCount,
-                currentFile = currentFile,
-                speed = speed,
-                eta = eta,
-                isCompleted = isCompleted,
-                isFailed = isFailed,
-                errorMessage = data.errorMessage?.takeIf { it.isNotEmpty() },
-                extractPath = extractPath,
-                rpycCount = rpycCount,
-                totalFiles = data.totalFiles,
-                elapsedMs = data.getElapsedMs(),
-                operation = data.operation,
-                originalSizeBytes = data.originalSizeBytes,
-                compressedSizeBytes = data.compressedSizeBytes
-            )
+        // Update UI state on Main thread
+        withContext(Dispatchers.Main) {
+            _uiState.update {
+                ProgressUiState(
+                    operationType = operationType,
+                    percentage = percentage,
+                    fileCount = fileCount,
+                    currentFile = currentFile,
+                    speed = speed,
+                    eta = eta,
+                    isCompleted = isCompleted,
+                    isFailed = isFailed,
+                    errorMessage = data.errorMessage?.takeIf { it.isNotEmpty() },
+                    extractPath = extractPath,
+                    rpycCount = rpycCount,
+                    totalFiles = data.totalFiles,
+                    elapsedMs = data.getElapsedMs(),
+                    operation = data.operation,
+                    originalSizeBytes = data.originalSizeBytes,
+                    compressedSizeBytes = data.compressedSizeBytes
+                )
+            }
         }
     }
 

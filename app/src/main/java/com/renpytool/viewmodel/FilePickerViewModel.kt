@@ -83,12 +83,12 @@ class FilePickerViewModel : ViewModel() {
                     continue
                 }
 
-                // Apply file filter if in FILE mode
+                // Apply file filter if in FILE mode (case-insensitive)
                 val state = _uiState.value
                 if (state.mode == FilePickerUiState.MODE_FILE &&
                     !file.isDirectory &&
                     state.fileFilter != null) {
-                    if (!file.name.endsWith(state.fileFilter)) {
+                    if (!file.name.lowercase().endsWith(state.fileFilter.lowercase())) {
                         continue
                     }
                 }

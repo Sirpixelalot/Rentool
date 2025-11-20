@@ -39,6 +39,7 @@ fun CompressionSettingsDialog(
     var threads by remember { mutableIntStateOf(initialSettings.threads) }
     var createRpaAfter by remember { mutableStateOf(initialSettings.createRpaAfter) }
 
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
 
     AlertDialog(
@@ -65,7 +66,10 @@ fun CompressionSettingsDialog(
                 ) {
                     Checkbox(
                         checked = skipImages,
-                        onCheckedChange = { skipImages = it }
+                        onCheckedChange = {
+                            skipImages = it
+                            errorMessage = null
+                        }
                     )
                     Text("Skip Images")
                 }
@@ -129,7 +133,10 @@ fun CompressionSettingsDialog(
                 ) {
                     Checkbox(
                         checked = skipAudio,
-                        onCheckedChange = { skipAudio = it }
+                        onCheckedChange = {
+                            skipAudio = it
+                            errorMessage = null
+                        }
                     )
                     Text("Skip Audio")
                 }
@@ -165,7 +172,10 @@ fun CompressionSettingsDialog(
                 ) {
                     Checkbox(
                         checked = skipVideo,
-                        onCheckedChange = { skipVideo = it }
+                        onCheckedChange = {
+                            skipVideo = it
+                            errorMessage = null
+                        }
                     )
                     Text("Skip Video")
                 }
@@ -214,6 +224,17 @@ fun CompressionSettingsDialog(
                     )
                     Text("Create RPA after compression")
                 }
+
+                // Error message display
+                errorMessage?.let { message ->
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // Custom scrollbar indicator
@@ -240,7 +261,14 @@ fun CompressionSettingsDialog(
                         threads = threads,
                         createRpaAfter = createRpaAfter
                     )
-                    onConfirm(settings)
+
+                    // Validate that at least one media type is enabled
+                    if (!settings.hasEnabledTypes()) {
+                        errorMessage = "Please enable at least one media type (Images, Audio, or Video)"
+                    } else {
+                        errorMessage = null
+                        onConfirm(settings)
+                    }
                 }
             ) {
                 Text("Start")

@@ -82,7 +82,9 @@ class CompressionManager(private val context: Context) {
                                    audioFiles.sumOf { it.length() } +
                                    videoFiles.sumOf { it.length() }
 
-            Log.i(TAG, "Total original size: ${totalOriginalSize / (1024 * 1024)} MB")
+            val totalFileCount = imageFiles.size + audioFiles.size + videoFiles.size
+
+            Log.i(TAG, "Total files: $totalFileCount, Total original size: ${totalOriginalSize / (1024 * 1024)} MB")
 
             var totalCompressedSize = 0L
             var totalProcessed = 0
@@ -102,14 +104,15 @@ class CompressionManager(private val context: Context) {
 
                 Log.d(TAG, "Image compression complete: success=${result.success}")
 
-                if (result.success) {
-                    totalProcessed += result.filesProcessed
-                    totalFailed += result.filesFailed
-                    totalCompressedSize += result.compressedSizeBytes
+                // Always aggregate results, even if some/all files failed
+                totalProcessed += result.filesProcessed
+                totalFailed += result.filesFailed
+                totalCompressedSize += result.compressedSizeBytes
 
+                if (result.success) {
                     Log.i(TAG, "Image compression complete: ${result.filesProcessed} succeeded, ${result.filesFailed} failed")
                 } else {
-                    Log.e(TAG, "Image compression failed: ${result.error}")
+                    Log.w(TAG, "Image compression had issues: ${result.filesProcessed} succeeded, ${result.filesFailed} failed, error: ${result.error}")
                 }
             }
 
@@ -152,6 +155,8 @@ class CompressionManager(private val context: Context) {
                         totalCompressedSize += result.compressedSize
                     } else {
                         totalFailed++
+                        // For failed files, count original size (no reduction)
+                        totalCompressedSize += result.originalSize
                         Log.w(TAG, "Failed to compress audio: ${audioFile.name}")
                     }
                 }
@@ -198,6 +203,8 @@ class CompressionManager(private val context: Context) {
                         totalCompressedSize += result.compressedSize
                     } else {
                         totalFailed++
+                        // For failed files, count original size (no reduction)
+                        totalCompressedSize += result.originalSize
                         Log.w(TAG, "Failed to compress video: ${videoFile.name}")
                     }
                 }
@@ -213,12 +220,12 @@ class CompressionManager(private val context: Context) {
             }
 
             // Final progress update
-            Log.i(TAG, "All phases complete. Total: $totalProcessed processed, $totalFailed failed")
+            Log.i(TAG, "All phases complete. Total: $totalProcessed processed, $totalFailed failed out of $totalFileCount")
             updateProgress(
                 progressTracker,
                 "compress",
-                totalProcessed,
-                totalProcessed,
+                totalProcessed + totalFailed,
+                totalFileCount,
                 "Complete",
                 startTime,
                 totalOriginalSize,
@@ -226,9 +233,14 @@ class CompressionManager(private val context: Context) {
                 status = "completed"
             )
 
+            // Success if:
+            // - At least one file was processed successfully, OR
+            // - Nothing to do (zero files found) is graceful success
+            val isSuccess = totalProcessed > 0 || totalFileCount == 0
+
             Log.d(TAG, "Returning compression result...")
             CompressionResult(
-                success = totalProcessed > 0,
+                success = isSuccess,
                 filesProcessed = totalProcessed,
                 filesFailed = totalFailed,
                 originalSizeBytes = totalOriginalSize,

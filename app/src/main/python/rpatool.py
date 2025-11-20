@@ -98,7 +98,7 @@ class RenPyArchive:
             return 3
         elif magic.startswith(self.RPA2_MAGIC):
             return 2
-        elif self.file.endswith('.rpi'):
+        elif self.file.lower().endswith('.rpi'):
             return 1
 
         raise ValueError('the given file is not a valid Ren\'Py archive, or an unsupported version')

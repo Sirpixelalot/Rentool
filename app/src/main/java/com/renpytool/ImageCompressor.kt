@@ -101,7 +101,12 @@ class ImageCompressor(private val context: Context) {
                         // Update progress after each image (synchronized)
                         synchronized(lock) {
                             processedCount++
-                            totalCompressed += result.compressedSize
+                            // For failed files, count original size (no reduction)
+                            totalCompressed += if (result.success) {
+                                result.compressedSize
+                            } else {
+                                result.originalSize
+                            }
 
                             updateProgress(
                                 progressTracker,
@@ -144,7 +149,7 @@ class ImageCompressor(private val context: Context) {
             )
 
             CompressionManager.CompressionResult(
-                success = successful > 0,
+                success = successful > 0 || totalImages == 0,  // Success if we processed files or nothing to do
                 filesProcessed = successful,
                 filesFailed = failed,
                 originalSizeBytes = totalOriginalSize,
@@ -220,7 +225,13 @@ class ImageCompressor(private val context: Context) {
             // Compress to WebP
             FileOutputStream(tempFile).use { out ->
                 val quality = if (settings.imageLossless) {
-                    100  // For lossless, 100 = best compression
+                    // For lossless, quality controls compression effort (speed vs file size)
+                    // Map imageMethod (0=fast, 4=average, 6=slow) to quality
+                    when {
+                        settings.imageMethod <= 2 -> 80  // Fast: less compression, faster
+                        settings.imageMethod in 3..5 -> 90  // Average: balanced
+                        else -> 100  // Slow: best compression, slower
+                    }
                 } else {
                     settings.imageQuality  // For lossy, quality 1-100
                 }

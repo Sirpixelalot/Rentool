@@ -3,6 +3,7 @@ package com.renpytool
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.chaquo.python.PyObject
@@ -581,7 +582,100 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     if (result.success) {
                         val ratio = String.format("%.1f", result.reductionPercent)
-                        _compressStatus.value = "Compressed ${result.filesProcessed} files ($ratio% reduction)"
+
+                        // Handle "nothing to do" case
+                        if (result.filesProcessed == 0 && result.filesFailed == 0) {
+                            _compressStatus.value = "No compressible files found"
+                        } else {
+                            val statusMsg = buildString {
+                                append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                if (result.filesFailed > 0) {
+                                    append(", ${result.filesFailed} failed")
+                                }
+                            }
+                            _compressStatus.value = statusMsg
+                        }
+
+                        // If createRpaAfter is enabled and we have files, create RPA archive from compressed output
+                        if (settings.createRpaAfter && result.filesProcessed > 0) {
+                            try {
+                                Log.i("MainViewModel", "Creating RPA archive from compressed output...")
+
+                                // Update progress for RPA creation phase
+                                val rpaProgress = ProgressData().apply {
+                                    operation = "create"
+                                    status = "in_progress"
+                                    startTime = System.currentTimeMillis()
+                                    lastUpdateTime = System.currentTimeMillis()
+                                    totalFiles = 0
+                                    processedFiles = 0
+                                    currentFile = "Creating RPA archive..."
+                                }
+                                tracker.writeProgress(rpaProgress)
+
+                                // Generate output RPA file path
+                                val outputDir = File(outputDirPath)
+                                val rpaFileName = "${outputDir.name}.rpa"
+                                val rpaOutputPath = File(outputDir.parentFile, rpaFileName).absolutePath
+
+                                // Call Python creation
+                                val rpaResult = rpaModule.callAttr(
+                                    "create_rpa",
+                                    outputDirPath,
+                                    rpaOutputPath,
+                                    3,
+                                    0xDEADBEEF.toInt(),
+                                    tracker.progressFilePath
+                                )
+
+                                if (rpaResult != null) {
+                                    val successObj = rpaResult.callAttr("__getitem__", "success")
+                                    val filesObj = rpaResult.callAttr("__getitem__", "files")
+
+                                    val rpaSuccess = successObj.toJava(Boolean::class.java)
+                                    val fileCount = filesObj.asList().size
+
+                                    if (rpaSuccess) {
+                                        val rpaStatusMsg = buildString {
+                                            append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                            if (result.filesFailed > 0) {
+                                                append(", ${result.filesFailed} failed")
+                                            }
+                                            append(" + created RPA with $fileCount files")
+                                        }
+                                        _compressStatus.value = rpaStatusMsg
+                                        Log.i("MainViewModel", "RPA archive created successfully: $rpaOutputPath")
+                                    } else {
+                                        _compressStatus.value = buildString {
+                                            append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                            if (result.filesFailed > 0) {
+                                                append(", ${result.filesFailed} failed")
+                                            }
+                                            append(" but RPA creation failed")
+                                        }
+                                        Log.w("MainViewModel", "RPA creation failed")
+                                    }
+                                } else {
+                                    _compressStatus.value = buildString {
+                                        append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                        if (result.filesFailed > 0) {
+                                            append(", ${result.filesFailed} failed")
+                                        }
+                                        append(" but RPA creation returned null")
+                                    }
+                                }
+
+                            } catch (e: Exception) {
+                                Log.e("MainViewModel", "Error creating RPA after compression", e)
+                                _compressStatus.value = buildString {
+                                    append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                    if (result.filesFailed > 0) {
+                                        append(", ${result.filesFailed} failed")
+                                    }
+                                    append(" but RPA creation error: ${e.message}")
+                                }
+                            }
+                        }
                     } else {
                         _compressStatus.value = "Compression failed: ${result.error ?: "Unknown error"}"
                     }
