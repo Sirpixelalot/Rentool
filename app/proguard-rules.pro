@@ -5,17 +5,56 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve line numbers for debugging crash reports
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Chaquopy Python bridge - keep all Python-related classes
+-keep class com.chaquo.python.** { *; }
+-dontwarn com.chaquo.python.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep Python module wrapper classes (your Python bridge code)
+-keepclassmembers class ** {
+    *** getModule(...);
+    *** callAttr(...);
+}
+
+# Keep all enum classes (needed for valueOf() in CompressionSettings)
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+    **[] $VALUES;
+    public *;
+}
+
+# BouncyCastle crypto - keep algorithm names and providers
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+-keepnames class org.bouncycastle.jcajce.provider.** { *; }
+-keepnames class org.bouncycastle.jce.provider.** { *; }
+
+# APKSig library - keep signing classes
+-keep class com.android.apksig.** { *; }
+-dontwarn com.android.apksig.**
+
+# FFmpeg-Kit (should have its own consumer rules, but add just in case)
+-keep class com.arthenica.ffmpegkit.** { *; }
+-dontwarn com.arthenica.ffmpegkit.**
+
+# Keep data classes used for settings and configuration
+-keep class com.renpytool.CompressionSettings { *; }
+-keep class com.renpytool.VersionInfo { *; }
+-keep class com.renpytool.keystore.** { *; }
+
+# Keep UpdateChecker sealed class hierarchy
+-keep class com.renpytool.UpdateChecker$** { *; }
+
+# Keep ViewModels (shouldn't be obfuscated for easier debugging)
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+
+# Gson (if used for JSON parsing)
+-keepattributes Signature
+-keepattributes *Annotation*
+-dontwarn sun.misc.**
