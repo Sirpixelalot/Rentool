@@ -5,6 +5,11 @@
     <!-- Network permission for update checker -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Foreground service for background operations -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -50,6 +55,12 @@
             android:name=".RpyEditorActivityNew"
             android:exported="false"
             android:theme="@style/Theme.Rentool" />
+
+        <service
+            android:name=".OperationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
     </application>
 

@@ -1,22 +1,39 @@
 # Rentool
 
-An Android application to extract and create Ren'Py RPA archives and decompile RPYC scripts directly on your device.
+A comprehensive Android toolkit for Ren'Py game modding: extract/create RPA archives, decompile RPYC scripts, compress game assets, and edit .rpy files directly on your device.
 
 ## Features
 
+### Core Operations
 - **Extract RPA Archives**: Unpack Ren'Py game archives to access images, scripts, audio, and other assets
-- **Create RPA Archives**: Package files and folders into RPA v3 format archives
+- **Create RPA Archives**: Package files and folders into RPA v3 format archives with optional auto-creation after compression
 - **Decompile RPYC Scripts**: Convert compiled .rpyc files back to readable .rpy source scripts
-- **Batch Operations**: Extract multiple RPA files or decompile multiple RPYC files at once
+- **Compress Games**: Reduce game size with multi-format compression (WebP for images, Opus for audio, H.265 for video)
+- **Edit .rpy Scripts**: Built-in syntax-highlighted editor with Ren'Py language support
+
+### Compression Features
+- **Image Compression**: Convert PNG/JPG/BMP to WebP with lossless or quality-based compression (1-100%)
+- **Audio Compression**: Convert OGG/MP3/WAV/FLAC to Opus with configurable bitrate
+- **Video Compression**: Encode MP4/AVI/MKV/WebM to H.265 with quality presets
+- **Speed Control**: Choose Fast/Average/Slow compression modes for different performance needs
+- **Selective Compression**: Enable/disable specific media types, prevent empty operations
+
+### User Experience
+- **Background Operations**: Continue operations when app is minimized with persistent notifications
+- **Batch Processing**: Extract multiple RPA files or decompile multiple RPYC files at once
 - **Multi-Select Support**: Long-press to select multiple files or folders for batch operations
+- **Case-Insensitive Filtering**: Handles uppercase extensions (.RPA, .RPYC) from Windows distributions
 - **Smart Directory Defaults**: Output directory automatically defaults to the location of selected input files
-- **Real-time Progress Tracking**: View extraction/creation/decompilation progress with file counts, speed, and ETA
+- **Accurate Progress Tracking**: Real-time file counts, speed, ETA, and detailed failure reporting
+- **Auto-Update Checker**: Notifies when new versions are available on GitHub
 
 ## Requirements
 
-- **Android 11 or higher**
+- **Android 13 or higher** (API 33+)
 - **MANAGE_EXTERNAL_STORAGE permission**: Required for direct file system access
-- **Storage**: Enough space for extracted/created archives
+- **POST_NOTIFICATIONS permission**: Required for background operation notifications (Android 13+)
+- **Storage**: Enough space for extracted/created/compressed archives
+- **Processing**: Compression operations benefit from multi-core devices
 
 ## Installation
 
@@ -29,10 +46,11 @@ An Android application to extract and create Ren'Py RPA archives and decompile R
 
 ### Prerequisites
 
-- Android Studio Arctic Fox or later
+- Android Studio Hedgehog or later
 - Android SDK with API 34+
 - Python 3.8+ (for Chaquopy build)
 - Gradle 8.0+
+- FFmpeg-Kit AAR (included in `app/libs/`)
 
 ### Build Steps
 
@@ -103,6 +121,30 @@ python {
 
 **Tip**: Selecting a game's `/game` folder is the fastest way to decompile all scripts at once.
 
+### Compressing Games
+
+1. Tap the **"Compress Game"** card
+2. Select the source folder containing game assets (e.g., the `game` folder)
+3. Choose an output directory for compressed files
+4. Configure compression settings:
+   - **Image Quality**: 1-100 for lossy, or enable lossless compression
+   - **Speed Mode**: Fast/Average/Slow (affects lossless compression effort)
+   - **Audio Quality**: Low/Medium/High bitrate
+   - **Video Quality**: Low/Medium/High/Very High
+   - **Threads**: Number of parallel compression tasks
+   - **Selective Types**: Skip images, audio, or video if desired
+   - **Auto RPA**: Optionally create RPA archive from compressed output
+5. Monitor real-time progress with file counts and compression statistics
+6. Failed files are counted as original size for accurate reduction metrics
+
+### Editing .rpy Scripts
+
+1. Tap the **"Edit .rpy"** card
+2. Browse and select a `.rpy` file (case-insensitive)
+3. Edit code with syntax highlighting and line numbers
+4. Save changes directly to the file
+5. Return to file picker to open another script
+
 ## Technical Details
 
 ### RPA Format Support
@@ -118,25 +160,47 @@ python {
 - Files are overwritten without prompting during extraction
 - Batch creation uses temporary directory for combining multiple sources
 
+### Compression System
+
+- **Image Encoder**: Native Android Bitmap API with WebP format (hardware-accelerated)
+- **Audio Encoder**: FFmpeg-Kit with Opus codec
+- **Video Encoder**: FFmpeg-Kit with H.265/HEVC codec
+- **Parallel Processing**: Configurable thread pool for concurrent image compression
+- **Sequential Processing**: Audio and video processed sequentially to manage memory
+- **Accurate Metrics**: Tracks actual file counts (X/Y), failed files, and true reduction percentages
+
+### Background Operations
+
+- **Foreground Service**: Operations continue when app is minimized or screen is off
+- **Persistent Notifications**: Real-time progress updates in status bar (file count, current file, percentage)
+- **Completion Notifications**: Dismissible notifications remain visible after operations complete
+- **Thread Safety**: All I/O operations run on Dispatchers.IO to prevent UI freezing
+
 ### Progress Tracking
 
 - JSON-based progress file updated in real-time
-- Polling interval: 500ms
-- Tracks: file count, current file, speed (files/sec), ETA
+- Polling interval: 500ms (background operations) / 500ms (UI updates)
+- Tracks: file count, current file, speed (files/sec), ETA, batch info, compression statistics
+- Case-insensitive file filtering for Windows compatibility (.RPA, .RPYC, .RPY)
 
 ## Architecture
 
-- **Language**: Java, Python
-- **UI Framework**: Material Design 3
-- **Python Integration**: Chaquopy
-- **RPA Library**: rpatool.py
-- **Decompiler**: unrpyc
-- **File Picker**: Custom RecyclerView-based picker with multi-select
+- **Language**: Kotlin, Python
+- **UI Framework**: Jetpack Compose with Material Design 3
+- **Python Integration**: Chaquopy (Python 3.8)
+- **RPA Library**: rpatool.py (modified for progress tracking)
+- **Decompiler**: unrpyc (CensoredUsername's fork)
+- **Compression**: FFmpeg-Kit 6.0 (full build), Android Bitmap API
+- **Code Editor**: Sora Editor with TextMate grammar support
+- **File Picker**: Jetpack Compose-based picker with multi-select
+- **Concurrency**: Kotlin Coroutines with structured concurrency
 
 ## Credits
 
 - **RPA Format**: Based on [Ren'Py](https://www.renpy.org/) archive specification
 - **Python Integration**: [Chaquopy](https://chaquo.com/chaquopy/)
+- **Media Compression**: [FFmpeg-Kit](https://github.com/arthenica/ffmpeg-kit)
+- **Code Editor**: [Sora Editor](https://github.com/Rosemoe/sora-editor)
 - **Folder Icons**: [Icons8](https://icons8.com/)
 - **Rpatool**: [Shizmob](https://codeberg.org/shiz/rpatool)
 - **Unrpyc**: [CensoredUsername](https://github.com/CensoredUsername/unrpyc)

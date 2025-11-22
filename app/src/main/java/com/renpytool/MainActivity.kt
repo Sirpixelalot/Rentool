@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
+        private const val PERMISSION_REQUEST_NOTIFICATION = 101
     }
 
     // ViewModel
@@ -130,6 +131,19 @@ class MainActivity : ComponentActivity() {
 
 
     private fun checkPermissions() {
+        // Check notification permission for Android 13+ (for background operation notifications)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    PERMISSION_REQUEST_NOTIFICATION
+                )
+            }
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11 and above - use MANAGE_EXTERNAL_STORAGE
             if (!Environment.isExternalStorageManager()) {
@@ -176,14 +190,26 @@ class MainActivity : ComponentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-            if (!allGranted) {
-                Toast.makeText(
-                    this,
-                    "Permissions are required for this app to work",
-                    Toast.LENGTH_LONG
-                ).show()
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+                if (!allGranted) {
+                    Toast.makeText(
+                        this,
+                        "Permissions are required for this app to work",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            PERMISSION_REQUEST_NOTIFICATION -> {
+                val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                if (!granted) {
+                    Toast.makeText(
+                        this,
+                        "Notification permission is recommended for background operations",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }

@@ -2,8 +2,10 @@ package com.renpytool
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.chaquo.python.PyObject
@@ -92,6 +94,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Start foreground service for background operation support
+     */
+    private fun startOperationService(action: String, sourcePath: String? = null, outputPath: String? = null) {
+        try {
+            val intent = Intent(context, OperationService::class.java).apply {
+                this.action = action
+                sourcePath?.let { putExtra(OperationService.EXTRA_SOURCE_PATH, it) }
+                outputPath?.let { putExtra(OperationService.EXTRA_OUTPUT_PATH, it) }
+            }
+            ContextCompat.startForegroundService(context, intent)
+            Log.i("MainViewModel", "Started foreground service for $action")
+        } catch (e: Exception) {
+            Log.e("MainViewModel", "Failed to start foreground service", e)
+        }
+    }
+
+    /**
      * Perform batch extraction of RPA files
      */
     fun performBatchExtraction(rpaFilePaths: ArrayList<String>, extractDirPath: String) {
@@ -99,6 +118,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             withContext(Dispatchers.IO) {
                 val tracker = ProgressTracker(context)
                 tracker.clearProgress()
+
+                // Write initial progress BEFORE starting service
+                val initialData = ProgressData().apply {
+                    operation = "extract"
+                    status = "in_progress"
+                    startTime = System.currentTimeMillis()
+                    lastUpdateTime = System.currentTimeMillis()
+                    totalFiles = 0
+                    processedFiles = 0
+                    currentFile = "Starting batch extraction..."
+                    currentBatchIndex = 1
+                }
+                tracker.writeProgress(initialData)
+
+                // NOW start foreground service
+                withContext(Dispatchers.Main) {
+                    startOperationService(OperationService.ACTION_START_EXTRACTION, extractDirPath, extractDirPath)
+                }
 
                 val totalFiles = rpaFilePaths.size
                 var currentIndex = 1
@@ -187,7 +224,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 tracker.clearProgress()
 
                 try {
-                    // Initialize progress
+                    // Initialize progress BEFORE starting service
                     val initialData = ProgressData().apply {
                         operation = "extract"
                         status = "in_progress"
@@ -198,6 +235,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         currentFile = "Starting extraction..."
                     }
                     tracker.writeProgress(initialData)
+
+                    // NOW start foreground service (it will immediately see the progress)
+                    withContext(Dispatchers.Main) {
+                        startOperationService(OperationService.ACTION_START_EXTRACTION, rpaFilePath, extractDirPath)
+                    }
 
                     // Call Python extraction
                     val result = rpaModule.callAttr(
@@ -366,7 +408,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 tracker.clearProgress()
 
                 try {
-                    // Initialize progress
+                    // Initialize progress BEFORE starting service
                     val initialData = ProgressData().apply {
                         operation = "create"
                         status = "in_progress"
@@ -377,6 +419,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         currentFile = "Starting creation..."
                     }
                     tracker.writeProgress(initialData)
+
+                    // NOW start foreground service
+                    withContext(Dispatchers.Main) {
+                        startOperationService(OperationService.ACTION_START_CREATION, sourceDirPath, outputFilePath)
+                    }
 
                     // Call Python creation
                     val result = rpaModule.callAttr(
@@ -433,7 +480,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 tracker.clearProgress()
 
                 try {
-                    // Initialize progress
+                    // Initialize progress BEFORE starting service
                     val initialData = ProgressData().apply {
                         operation = "decompile"
                         status = "in_progress"
@@ -444,6 +491,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         currentFile = "Starting decompilation..."
                     }
                     tracker.writeProgress(initialData)
+
+                    // NOW start foreground service
+                    withContext(Dispatchers.Main) {
+                        startOperationService(OperationService.ACTION_START_DECOMPILATION, sourceDirPath)
+                    }
 
                     // Call Python decompilation
                     val result = decompileModule.callAttr(
@@ -559,7 +611,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 tracker.clearProgress()
 
                 try {
-                    // Initialize progress
+                    // Initialize progress BEFORE starting service
                     val initialData = ProgressData().apply {
                         operation = "compress"
                         status = "in_progress"
@@ -570,6 +622,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         currentFile = "Scanning files..."
                     }
                     tracker.writeProgress(initialData)
+
+                    // NOW start foreground service (it will immediately see the progress)
+                    withContext(Dispatchers.Main) {
+                        startOperationService(OperationService.ACTION_START_COMPRESSION, sourceDirPath, outputDirPath)
+                    }
 
                     // Create compression manager and perform compression
                     val compressionManager = CompressionManager(context)
