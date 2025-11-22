@@ -301,6 +301,11 @@ fun KeystoreSelectionDialog(
                                 nameError = "Use only letters, numbers, _ and -"
                                 return@TextButton
                             }
+                            // Check for duplicate names
+                            if (availableKeystores.any { it.name == newKeystoreName }) {
+                                nameError = "Keystore with this name already exists. Pick a different name."
+                                return@TextButton
+                            }
                             if (newKeystorePassword.isBlank()) {
                                 passwordError = "Password cannot be empty"
                                 return@TextButton
