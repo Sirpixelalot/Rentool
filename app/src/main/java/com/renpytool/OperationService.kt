@@ -116,7 +116,7 @@ class OperationService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Renpytool")
+            .setContentTitle("Rentool")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_compress)
             .setContentIntent(pendingIntent)
