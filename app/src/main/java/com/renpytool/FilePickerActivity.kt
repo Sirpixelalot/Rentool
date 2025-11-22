@@ -81,8 +81,14 @@ class FilePickerActivity : ComponentActivity() {
                     viewModel.navigateToDirectory(item.file)
                 }
                 else -> {
-                    // File selected (only in FILE mode)
+                    // File selected
+                    // Allow in FILE mode OR in compress mode for APK files
                     if (uiState.mode == FilePickerUiState.MODE_FILE) {
+                        selectFile(item.file)
+                    } else if (uiState.mode == FilePickerUiState.MODE_DIRECTORY &&
+                               uiState.fileFilter == "compress_source" &&
+                               item.file.name.lowercase().endsWith(".apk")) {
+                        // Special case: allow APK selection in compress mode
                         selectFile(item.file)
                     }
                 }

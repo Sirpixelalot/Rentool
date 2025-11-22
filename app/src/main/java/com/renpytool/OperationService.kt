@@ -140,8 +140,20 @@ class OperationService : Service() {
                     if (data != null) {
                         noDataCount = 0 // Reset counter when we get data
                         val progress = data.getPercentage()
+
+                        // Get operation-specific name
+                        val currentOperationName = when (data.operation) {
+                            "extract_apk" -> "Extracting APK"
+                            "compress_assets" -> "Compressing Assets"
+                            "repackage_apk" -> "Repackaging APK"
+                            "align_apk" -> "Aligning APK"
+                            "sign_apk" -> "Signing APK"
+                            "compress_apk" -> "Compressing APK"
+                            else -> operationName
+                        }
+
                         val text = buildString {
-                            append(operationName)
+                            append(currentOperationName)
                             if (data.totalFiles > 0) {
                                 append(": ${data.processedFiles}/${data.totalFiles} files")
                             }
@@ -165,9 +177,9 @@ class OperationService : Service() {
                         // Check if operation completed or failed
                         if (data.isCompleted() || data.isFailed()) {
                             val finalText = if (data.isCompleted()) {
-                                "$operationName completed"
+                                "$currentOperationName completed"
                             } else {
-                                "$operationName failed: ${data.errorMessage ?: "Unknown error"}"
+                                "$currentOperationName failed: ${data.errorMessage ?: "Unknown error"}"
                             }
 
                             // Update notification one last time for completion

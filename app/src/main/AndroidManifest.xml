@@ -56,6 +56,11 @@
             android:exported="false"
             android:theme="@style/Theme.Rentool" />
 
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Rentool" />
+
         <service
             android:name=".OperationService"
             android:enabled="true"

@@ -112,6 +112,12 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
             data.operation == "compress_images" -> "Compressing Images..."
             data.operation == "compress_audio" -> "Compressing Audio..."
             data.operation == "compress_video" -> "Compressing Video..."
+            data.operation == "extract_apk" -> "Extracting APK Assets..."
+            data.operation == "compress_assets" -> "Compressing Assets..."
+            data.operation == "repackage_apk" -> "Repackaging APK..."
+            data.operation == "align_apk" -> "Aligning APK..."
+            data.operation == "sign_apk" -> "Signing APK..."
+            data.operation == "compress_apk" -> "Compressing APK..."
             data.operation.startsWith("compress") -> "Compressing Game..."
             else -> "Creating RPA Archive..."
         }

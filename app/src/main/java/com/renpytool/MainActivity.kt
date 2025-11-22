@@ -29,8 +29,13 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
+import com.renpytool.keystore.KeystoreInfo
+import com.renpytool.keystore.KeystoreManager
+import com.renpytool.keystore.SigningOption
 import com.renpytool.ui.CompressionSettingsDialog
+import com.renpytool.ui.KeystoreSelectionDialog
 import com.renpytool.ui.MainScreenContent
+import com.renpytool.ui.RandomKeyWarningDialog
 import com.renpytool.ui.theme.RenpytoolTheme
 import java.io.File
 import java.util.ArrayList
@@ -52,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var decompileDirPickerLauncher: ActivityResultLauncher<Intent>
     private lateinit var compressSourcePickerLauncher: ActivityResultLauncher<Intent>
     private lateinit var compressOutputPickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var keystoreImportPickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var keystoreExportPickerLauncher: ActivityResultLauncher<Intent>
 
     // Progress activity launcher for chaining operations
     private lateinit var progressActivityLauncher: ActivityResultLauncher<Intent>
@@ -63,6 +70,11 @@ class MainActivity : ComponentActivity() {
     private var selectedSourcePaths: ArrayList<String>? = null  // For batch creation
     private var selectedCompressSourcePath: String? = null
     private var selectedCompressOutputPath: String? = null
+
+    // Keystore management state
+    private var selectedSigningOption: SigningOption? = null
+    private var pendingKeystoreExport: KeystoreInfo? = null
+    private var pendingCompressionSettings: CompressionSettings? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,7 +121,6 @@ class MainActivity : ComponentActivity() {
         val editStatus by viewModel.editStatus.collectAsState()
         val compressStatus by viewModel.compressStatus.collectAsState()
         val cardsEnabled by viewModel.cardsEnabled.collectAsState()
-        val themeMode by viewModel.themeMode.collectAsState()
 
         MainScreenContent(
             extractStatus = extractStatus,
@@ -123,10 +134,14 @@ class MainActivity : ComponentActivity() {
             onDecompileClick = { startDecompileFlow() },
             onEditClick = { startEditRpyFlow() },
             onCompressClick = { startCompressFlow() },
-            themeMode = themeMode,
-            onThemeModeChange = { mode -> viewModel.setThemeMode(mode) },
+            onSettingsClick = { startSettingsActivity() },
             modifier = Modifier.fillMaxSize()
         )
+    }
+
+    private fun startSettingsActivity() {
+        val intent = Intent(this, SettingsActivity::class.java)
+        startActivity(intent)
     }
 
 
@@ -332,8 +347,22 @@ class MainActivity : ComponentActivity() {
         ) { result ->
             if (result.resultCode == Activity.RESULT_OK && result.data != null) {
                 selectedCompressSourcePath = result.data?.getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH)
-                // Use same folder - overwrite originals with compressed versions
-                selectedCompressOutputPath = selectedCompressSourcePath
+
+                // If APK file selected, set output to "{name}-compressed.apk" in parent directory
+                // If directory selected, use same folder (overwrite originals)
+                selectedCompressOutputPath = selectedCompressSourcePath?.let { sourcePath ->
+                    val sourceFile = File(sourcePath)
+                    if (sourceFile.isFile && sourceFile.name.lowercase().endsWith(".apk")) {
+                        // APK file: output in parent directory with "-compressed" suffix
+                        val nameWithoutExt = sourceFile.nameWithoutExtension
+                        val parentDir = sourceFile.parentFile
+                        File(parentDir, "$nameWithoutExt-compressed.apk").absolutePath
+                    } else {
+                        // Directory: use same location
+                        sourcePath
+                    }
+                }
+
                 // Show compression settings dialog
                 showCompressionSettingsDialog()
             }
@@ -347,6 +376,32 @@ class MainActivity : ComponentActivity() {
                 selectedCompressOutputPath = result.data?.getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH)
                 // Show compression settings dialog
                 showCompressionSettingsDialog()
+            }
+        }
+
+        // Keystore: Import keystore file
+        keystoreImportPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                val keystorePath = result.data?.getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH)
+                keystorePath?.let { path ->
+                    handleKeystoreImport(File(path))
+                }
+            }
+        }
+
+        // Keystore: Export keystore file
+        keystoreExportPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                val exportPath = result.data?.getStringExtra(FilePickerActivity.EXTRA_SELECTED_PATH)
+                exportPath?.let { path ->
+                    pendingKeystoreExport?.let { keystoreInfo ->
+                        handleKeystoreExport(keystoreInfo, File(path))
+                    }
+                }
             }
         }
     }
@@ -570,10 +625,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startCompressFlow() {
-        // Launch file picker for game directory (source)
+        // Launch file picker for game directory or APK file
         val intent = Intent(this, FilePickerActivity::class.java).apply {
             putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_DIRECTORY)
-            putExtra(FilePickerActivity.EXTRA_TITLE, "Select Game Folder to Compress")
+            putExtra(FilePickerActivity.EXTRA_FILE_FILTER, "compress_source")
+            putExtra(FilePickerActivity.EXTRA_TITLE, "Select Game Folder or APK")
         }
         compressSourcePickerLauncher.launch(intent)
     }
@@ -587,6 +643,106 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showCompressionSettingsDialog() {
+        val sourcePath = selectedCompressSourcePath
+        val outputPath = selectedCompressOutputPath
+
+        if (sourcePath == null || outputPath == null) {
+            Toast.makeText(this, "Error: Missing source or output path", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Check if source is an APK file
+        val sourceFile = File(sourcePath)
+        val isApk = sourceFile.isFile && sourceFile.name.lowercase().endsWith(".apk")
+
+        if (isApk) {
+            // Show keystore selection dialog first for APKs
+            showKeystoreSelectionDialog()
+        } else {
+            // Show compression settings directly for directories
+            showCompressionSettingsDialogInternal(null)
+        }
+    }
+
+    private fun showKeystoreSelectionDialog() {
+        val keystoreManager = KeystoreManager(this)
+        val availableKeystores = keystoreManager.listKeystores()
+
+        setContent {
+            RenpytoolTheme(
+                darkTheme = when (viewModel.themeMode.value) {
+                    MainViewModel.ThemeMode.LIGHT -> false
+                    MainViewModel.ThemeMode.DARK -> true
+                    MainViewModel.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                }
+            ) {
+                KeystoreSelectionDialog(
+                    availableKeystores = availableKeystores,
+                    onOptionSelected = { signingOption ->
+                        selectedSigningOption = signingOption
+
+                        // Show warning for random key
+                        if (signingOption is SigningOption.RandomKey) {
+                            showRandomKeyWarningDialog()
+                        } else {
+                            // Proceed to compression settings
+                            showCompressionSettingsDialogInternal(signingOption)
+                        }
+                    },
+                    onDismiss = {
+                        // User cancelled, reset to main UI
+                        setupMainUI()
+                    },
+                    onImportKeystore = {
+                        // Launch file picker for .bks file
+                        val intent = Intent(this, FilePickerActivity::class.java).apply {
+                            putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_FILE)
+                            putExtra(FilePickerActivity.EXTRA_FILE_FILTER, ".bks")
+                            putExtra(FilePickerActivity.EXTRA_TITLE, "Select Keystore File")
+                        }
+                        keystoreImportPickerLauncher.launch(intent)
+                    },
+                    onExportKeystore = { keystoreInfo ->
+                        pendingKeystoreExport = keystoreInfo
+                        // Launch directory picker for export location
+                        val intent = Intent(this, FilePickerActivity::class.java).apply {
+                            putExtra(FilePickerActivity.EXTRA_MODE, FilePickerActivity.MODE_DIRECTORY)
+                            putExtra(FilePickerActivity.EXTRA_TITLE, "Select Export Location")
+                        }
+                        keystoreExportPickerLauncher.launch(intent)
+                    },
+                    onDeleteKeystore = { keystoreInfo ->
+                        handleKeystoreDelete(keystoreInfo)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun showRandomKeyWarningDialog() {
+        setContent {
+            RenpytoolTheme(
+                darkTheme = when (viewModel.themeMode.value) {
+                    MainViewModel.ThemeMode.LIGHT -> false
+                    MainViewModel.ThemeMode.DARK -> true
+                    MainViewModel.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                }
+            ) {
+                RandomKeyWarningDialog(
+                    onContinue = {
+                        // User confirmed, proceed to compression settings
+                        showCompressionSettingsDialogInternal(selectedSigningOption)
+                    },
+                    onGoBack = {
+                        // Go back to keystore selection
+                        showKeystoreSelectionDialog()
+                    }
+                )
+            }
+        }
+    }
+
+    private fun showCompressionSettingsDialogInternal(signingOption: SigningOption?) {
         val sourcePath = selectedCompressSourcePath
         val outputPath = selectedCompressOutputPath
 
@@ -615,7 +771,7 @@ class MainActivity : ComponentActivity() {
                         // Start compression
                         val intent = Intent(this@MainActivity, ProgressActivity::class.java)
                         startActivity(intent)
-                        viewModel.performCompression(sourcePath, outputPath, newSettings)
+                        viewModel.performCompression(sourcePath, outputPath, newSettings, signingOption)
                         // Reset to main UI
                         setupMainUI()
                     },
@@ -626,6 +782,111 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun handleKeystoreImport(keystoreFile: File) {
+        // Prefill name from filename (without extension)
+        val defaultName = keystoreFile.nameWithoutExtension
+
+        // Prompt user for keystore name and password
+        val inputLayout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(50, 20, 50, 20)
+        }
+
+        val nameInput = TextInputEditText(this).apply {
+            hint = "Keystore name (e.g., my_key)"
+            setText(defaultName)  // Prefill with filename
+        }
+        val passwordInput = TextInputEditText(this).apply {
+            hint = "Keystore password"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+
+        inputLayout.addView(nameInput)
+        inputLayout.addView(passwordInput)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Import Keystore")
+            .setMessage("Enter the keystore name and password:")
+            .setView(inputLayout)
+            .setPositiveButton("Import") { _, _ ->
+                val name = nameInput.text?.toString()?.trim() ?: ""
+                val password = passwordInput.text?.toString() ?: ""
+
+                if (name.isBlank()) {
+                    Toast.makeText(this, "Keystore name cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                if (password.isBlank()) {
+                    Toast.makeText(this, "Password cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                lifecycleScope.launch {
+                    val keystoreManager = KeystoreManager(this@MainActivity)
+                    val result = keystoreManager.importKeystore(keystoreFile, name, password)
+
+                    if (result.isSuccess) {
+                        Toast.makeText(this@MainActivity, "Keystore imported successfully", Toast.LENGTH_SHORT).show()
+                        // Refresh keystore selection dialog
+                        showKeystoreSelectionDialog()
+                    } else {
+                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
+                        Toast.makeText(this@MainActivity, "Import failed: $errorMsg", Toast.LENGTH_LONG).show()
+                        showKeystoreSelectionDialog()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                showKeystoreSelectionDialog()
+            }
+            .show()
+    }
+
+    private fun handleKeystoreExport(keystoreInfo: KeystoreInfo, exportDir: File) {
+        lifecycleScope.launch {
+            val keystoreManager = KeystoreManager(this@MainActivity)
+            val exportFile = File(exportDir, "${keystoreInfo.name}.bks")
+            val result = keystoreManager.exportKeystore(keystoreInfo, exportFile)
+
+            if (result.isSuccess) {
+                Toast.makeText(this@MainActivity, "Keystore exported to ${exportFile.absolutePath}", Toast.LENGTH_LONG).show()
+            } else {
+                val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
+                Toast.makeText(this@MainActivity, "Export failed: $errorMsg", Toast.LENGTH_LONG).show()
+            }
+
+            // Refresh keystore selection dialog
+            showKeystoreSelectionDialog()
+        }
+    }
+
+    private fun handleKeystoreDelete(keystoreInfo: KeystoreInfo) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Delete Keystore")
+            .setMessage("Are you sure you want to delete keystore '${keystoreInfo.name}'? This action cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                lifecycleScope.launch {
+                    val keystoreManager = KeystoreManager(this@MainActivity)
+                    val result = keystoreManager.deleteKeystore(keystoreInfo)
+
+                    if (result.isSuccess) {
+                        Toast.makeText(this@MainActivity, "Keystore deleted", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
+                        Toast.makeText(this@MainActivity, "Delete failed: $errorMsg", Toast.LENGTH_SHORT).show()
+                    }
+
+                    // Refresh keystore selection dialog
+                    showKeystoreSelectionDialog()
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                showKeystoreSelectionDialog()
+            }
+            .show()
     }
 
     override fun onResume() {

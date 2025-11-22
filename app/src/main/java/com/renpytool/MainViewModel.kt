@@ -603,158 +603,246 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun performCompression(
         sourceDirPath: String,
         outputDirPath: String,
-        settings: CompressionSettings
+        settings: CompressionSettings,
+        signingOption: com.renpytool.keystore.SigningOption? = null
     ) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val tracker = ProgressTracker(context)
-                tracker.clearProgress()
+                val sourceFile = File(sourceDirPath)
 
-                try {
-                    // Initialize progress BEFORE starting service
-                    val initialData = ProgressData().apply {
-                        operation = "compress"
-                        status = "in_progress"
-                        startTime = System.currentTimeMillis()
-                        lastUpdateTime = System.currentTimeMillis()
-                        totalFiles = 0
-                        processedFiles = 0
-                        currentFile = "Scanning files..."
+                // Detect if source is an APK file or directory
+                if (sourceFile.isFile && sourceFile.name.lowercase().endsWith(".apk")) {
+                    // APK compression path
+                    performApkCompression(sourceFile, File(outputDirPath), settings, signingOption)
+                } else {
+                    // Directory compression path (existing logic)
+                    performDirectoryCompression(sourceDirPath, outputDirPath, settings)
+                }
+            }
+        }
+    }
+
+    /**
+     * Perform APK compression
+     */
+    private suspend fun performApkCompression(
+        apkFile: File,
+        outputApk: File,
+        settings: CompressionSettings,
+        signingOption: com.renpytool.keystore.SigningOption?
+    ) {
+        val tracker = ProgressTracker(context)
+        tracker.clearProgress()
+
+        try {
+            // Validate it's a Ren'Py APK
+            val apkCompressor = ApkCompressor(context)
+            if (!apkCompressor.detectRenpyApk(apkFile)) {
+                withContext(Dispatchers.Main) {
+                    _compressStatus.value = "Error: Not a Ren'Py APK (no x- prefixed assets found)"
+                }
+                return
+            }
+
+            // Initialize progress BEFORE starting service
+            val initialData = ProgressData().apply {
+                operation = "compress_apk"
+                status = "in_progress"
+                startTime = System.currentTimeMillis()
+                lastUpdateTime = System.currentTimeMillis()
+                totalFiles = 0
+                processedFiles = 0
+                currentFile = "Preparing APK compression..."
+            }
+            tracker.writeProgress(initialData)
+
+            // Start foreground service
+            withContext(Dispatchers.Main) {
+                startOperationService(OperationService.ACTION_START_COMPRESSION, apkFile.absolutePath, outputApk.absolutePath)
+            }
+
+            // Perform APK compression
+            val result = apkCompressor.compressApk(apkFile, outputApk, settings, tracker, signingOption)
+
+            if (result.success) {
+                val ratio = String.format("%.1f", result.reductionPercent)
+                val statusMsg = buildString {
+                    append("Compressed APK: ${result.filesProcessed} files ($ratio% reduction)")
+                    if (result.filesFailed > 0) {
+                        append(", ${result.filesFailed} failed")
                     }
-                    tracker.writeProgress(initialData)
+                }
+                withContext(Dispatchers.Main) {
+                    _compressStatus.value = statusMsg
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    _compressStatus.value = "APK compression failed"
+                }
+            }
 
-                    // NOW start foreground service (it will immediately see the progress)
-                    withContext(Dispatchers.Main) {
-                        startOperationService(OperationService.ACTION_START_COMPRESSION, sourceDirPath, outputDirPath)
-                    }
+        } catch (e: Exception) {
+            Log.e("MainViewModel", "APK compression error", e)
+            withContext(Dispatchers.Main) {
+                _compressStatus.value = "APK compression error: ${e.message}"
+            }
+        }
+    }
 
-                    // Create compression manager and perform compression
-                    val compressionManager = CompressionManager(context)
-                    val result = compressionManager.compressGame(
-                        File(sourceDirPath),
-                        File(outputDirPath),
-                        settings,
-                        tracker
-                    )
+    /**
+     * Perform directory compression (existing logic)
+     */
+    private suspend fun performDirectoryCompression(
+        sourceDirPath: String,
+        outputDirPath: String,
+        settings: CompressionSettings
+    ) {
+        val tracker = ProgressTracker(context)
+        tracker.clearProgress()
 
-                    if (result.success) {
-                        val ratio = String.format("%.1f", result.reductionPercent)
+        try {
+            // Initialize progress BEFORE starting service
+            val initialData = ProgressData().apply {
+                operation = "compress"
+                status = "in_progress"
+                startTime = System.currentTimeMillis()
+                lastUpdateTime = System.currentTimeMillis()
+                totalFiles = 0
+                processedFiles = 0
+                currentFile = "Scanning files..."
+            }
+            tracker.writeProgress(initialData)
 
-                        // Handle "nothing to do" case
-                        if (result.filesProcessed == 0 && result.filesFailed == 0) {
-                            _compressStatus.value = "No compressible files found"
-                        } else {
-                            val statusMsg = buildString {
-                                append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
-                                if (result.filesFailed > 0) {
-                                    append(", ${result.filesFailed} failed")
-                                }
-                            }
-                            _compressStatus.value = statusMsg
+            // NOW start foreground service (it will immediately see the progress)
+            withContext(Dispatchers.Main) {
+                startOperationService(OperationService.ACTION_START_COMPRESSION, sourceDirPath, outputDirPath)
+            }
+
+            // Create compression manager and perform compression
+            val compressionManager = CompressionManager(context)
+            val result = compressionManager.compressGame(
+                File(sourceDirPath),
+                File(outputDirPath),
+                settings,
+                tracker
+            )
+
+            if (result.success) {
+                val ratio = String.format("%.1f", result.reductionPercent)
+
+                // Handle "nothing to do" case
+                if (result.filesProcessed == 0 && result.filesFailed == 0) {
+                    _compressStatus.value = "No compressible files found"
+                } else {
+                    val statusMsg = buildString {
+                        append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                        if (result.filesFailed > 0) {
+                            append(", ${result.filesFailed} failed")
                         }
+                    }
+                    _compressStatus.value = statusMsg
+                }
 
-                        // If createRpaAfter is enabled and we have files, create RPA archive from compressed output
-                        if (settings.createRpaAfter && result.filesProcessed > 0) {
-                            try {
-                                Log.i("MainViewModel", "Creating RPA archive from compressed output...")
+                // If createRpaAfter is enabled and we have files, create RPA archive from compressed output
+                if (settings.createRpaAfter && result.filesProcessed > 0) {
+                    try {
+                        Log.i("MainViewModel", "Creating RPA archive from compressed output...")
 
-                                // Update progress for RPA creation phase
-                                val rpaProgress = ProgressData().apply {
-                                    operation = "create"
-                                    status = "in_progress"
-                                    startTime = System.currentTimeMillis()
-                                    lastUpdateTime = System.currentTimeMillis()
-                                    totalFiles = 0
-                                    processedFiles = 0
-                                    currentFile = "Creating RPA archive..."
-                                }
-                                tracker.writeProgress(rpaProgress)
+                        // Update progress for RPA creation phase
+                        val rpaProgress = ProgressData().apply {
+                            operation = "create"
+                            status = "in_progress"
+                            startTime = System.currentTimeMillis()
+                            lastUpdateTime = System.currentTimeMillis()
+                            totalFiles = 0
+                            processedFiles = 0
+                            currentFile = "Creating RPA archive..."
+                        }
+                        tracker.writeProgress(rpaProgress)
 
-                                // Generate output RPA file path
-                                val outputDir = File(outputDirPath)
-                                val rpaFileName = "${outputDir.name}.rpa"
-                                val rpaOutputPath = File(outputDir.parentFile, rpaFileName).absolutePath
+                        // Generate output RPA file path
+                        val outputDir = File(outputDirPath)
+                        val rpaFileName = "${outputDir.name}.rpa"
+                        val rpaOutputPath = File(outputDir.parentFile, rpaFileName).absolutePath
 
-                                // Call Python creation
-                                val rpaResult = rpaModule.callAttr(
-                                    "create_rpa",
-                                    outputDirPath,
-                                    rpaOutputPath,
-                                    3,
-                                    0xDEADBEEF.toInt(),
-                                    tracker.progressFilePath
-                                )
+                        // Call Python creation
+                        val rpaResult = rpaModule.callAttr(
+                            "create_rpa",
+                            outputDirPath,
+                            rpaOutputPath,
+                            3,
+                            0xDEADBEEF.toInt(),
+                            tracker.progressFilePath
+                        )
 
-                                if (rpaResult != null) {
-                                    val successObj = rpaResult.callAttr("__getitem__", "success")
-                                    val filesObj = rpaResult.callAttr("__getitem__", "files")
+                        if (rpaResult != null) {
+                            val successObj = rpaResult.callAttr("__getitem__", "success")
+                            val filesObj = rpaResult.callAttr("__getitem__", "files")
 
-                                    val rpaSuccess = successObj.toJava(Boolean::class.java)
-                                    val fileCount = filesObj.asList().size
+                            val rpaSuccess = successObj.toJava(Boolean::class.java)
+                            val fileCount = filesObj.asList().size
 
-                                    if (rpaSuccess) {
-                                        val rpaStatusMsg = buildString {
-                                            append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
-                                            if (result.filesFailed > 0) {
-                                                append(", ${result.filesFailed} failed")
-                                            }
-                                            append(" + created RPA with $fileCount files")
-                                        }
-                                        _compressStatus.value = rpaStatusMsg
-                                        Log.i("MainViewModel", "RPA archive created successfully: $rpaOutputPath")
-                                    } else {
-                                        _compressStatus.value = buildString {
-                                            append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
-                                            if (result.filesFailed > 0) {
-                                                append(", ${result.filesFailed} failed")
-                                            }
-                                            append(" but RPA creation failed")
-                                        }
-                                        Log.w("MainViewModel", "RPA creation failed")
+                            if (rpaSuccess) {
+                                val rpaStatusMsg = buildString {
+                                    append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                    if (result.filesFailed > 0) {
+                                        append(", ${result.filesFailed} failed")
                                     }
-                                } else {
-                                    _compressStatus.value = buildString {
-                                        append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
-                                        if (result.filesFailed > 0) {
-                                            append(", ${result.filesFailed} failed")
-                                        }
-                                        append(" but RPA creation returned null")
-                                    }
+                                    append(" + created RPA with $fileCount files")
                                 }
-
-                            } catch (e: Exception) {
-                                Log.e("MainViewModel", "Error creating RPA after compression", e)
+                                _compressStatus.value = rpaStatusMsg
+                                Log.i("MainViewModel", "RPA archive created successfully: $rpaOutputPath")
+                            } else {
                                 _compressStatus.value = buildString {
                                     append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
                                     if (result.filesFailed > 0) {
                                         append(", ${result.filesFailed} failed")
                                     }
-                                    append(" but RPA creation error: ${e.message}")
+                                    append(" but RPA creation failed")
                                 }
+                                Log.w("MainViewModel", "RPA creation failed")
+                            }
+                        } else {
+                            _compressStatus.value = buildString {
+                                append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                                if (result.filesFailed > 0) {
+                                    append(", ${result.filesFailed} failed")
+                                }
+                                append(" but RPA creation returned null")
                             }
                         }
-                    } else {
-                        _compressStatus.value = "Compression failed: ${result.error ?: "Unknown error"}"
-                    }
 
-                } catch (e: Exception) {
-                    e.printStackTrace()
-
-                    // Update progress with error
-                    try {
-                        val errorData = ProgressData().apply {
-                            operation = "compress"
-                            status = "failed"
-                            errorMessage = "Error: ${e.message}"
+                    } catch (e: Exception) {
+                        Log.e("MainViewModel", "Error creating RPA after compression", e)
+                        _compressStatus.value = buildString {
+                            append("Compressed ${result.filesProcessed} files ($ratio% reduction)")
+                            if (result.filesFailed > 0) {
+                                append(", ${result.filesFailed} failed")
+                            }
+                            append(" but RPA creation error: ${e.message}")
                         }
-                        tracker.writeProgress(errorData)
-                    } catch (ex: Exception) {
-                        ex.printStackTrace()
                     }
-
-                    _compressStatus.value = "Compression error: ${e.message}"
                 }
+            } else {
+                _compressStatus.value = "Compression failed: ${result.error ?: "Unknown error"}"
             }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+
+            // Update progress with error
+            try {
+                val errorData = ProgressData().apply {
+                    operation = "compress"
+                    status = "failed"
+                    errorMessage = "Error: ${e.message}"
+                }
+                tracker.writeProgress(errorData)
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+
+            _compressStatus.value = "Compression error: ${e.message}"
         }
     }
 

@@ -1,7 +1,11 @@
 package com.renpytool.viewmodel
 
+import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.os.Environment
-import androidx.lifecycle.ViewModel
+import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,9 +30,10 @@ data class FileItem(
     val name: String,
     val file: File,
     val isDirectory: Boolean = file.isDirectory,
-    val isParent: Boolean = name == ".."
+    val isParent: Boolean = name == "..",
+    val apkIcon: Bitmap? = null
 ) : Comparable<FileItem> {
-    constructor(file: File) : this(file.name, file)
+    constructor(file: File, apkIcon: Bitmap? = null) : this(file.name, file, file.isDirectory, false, apkIcon)
 
     override fun compareTo(other: FileItem): Int {
         // Sort: parent (..) first, then directories, then files, all alphabetically
@@ -42,9 +47,10 @@ data class FileItem(
     }
 }
 
-class FilePickerViewModel : ViewModel() {
+class FilePickerViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(FilePickerUiState())
     val uiState: StateFlow<FilePickerUiState> = _uiState.asStateFlow()
+    private val context = application.applicationContext
 
     fun initialize(mode: Int, fileFilter: String?, startPath: String?) {
         val startDir = if (!startPath.isNullOrEmpty()) {
@@ -85,15 +91,32 @@ class FilePickerViewModel : ViewModel() {
 
                 // Apply file filter if in FILE mode (case-insensitive)
                 val state = _uiState.value
-                if (state.mode == FilePickerUiState.MODE_FILE &&
+
+                // Special handling for compress mode - show directories AND .apk files
+                if (state.mode == FilePickerUiState.MODE_DIRECTORY &&
+                    state.fileFilter == "compress_source" &&
+                    !file.isDirectory) {
+                    // In compress mode, only show .apk files (skip other files)
+                    if (!file.name.lowercase().endsWith(".apk")) {
+                        continue
+                    }
+                } else if (state.mode == FilePickerUiState.MODE_FILE &&
                     !file.isDirectory &&
                     state.fileFilter != null) {
+                    // Normal file filtering
                     if (!file.name.lowercase().endsWith(state.fileFilter.lowercase())) {
                         continue
                     }
                 }
 
-                fileItems.add(FileItem(file))
+                // Extract APK icon if this is an APK file
+                val apkIcon = if (file.name.lowercase().endsWith(".apk")) {
+                    extractApkIcon(file)
+                } else {
+                    null
+                }
+
+                fileItems.add(FileItem(file, apkIcon))
             }
         }
 
@@ -106,6 +129,27 @@ class FilePickerViewModel : ViewModel() {
                 fileItems = fileItems,
                 selectedFiles = emptySet()
             )
+        }
+    }
+
+    /**
+     * Extract icon from APK file
+     */
+    private fun extractApkIcon(apkFile: File): Bitmap? {
+        return try {
+            val pm = context.packageManager
+            val packageInfo = pm.getPackageArchiveInfo(apkFile.absolutePath, 0)
+
+            if (packageInfo != null) {
+                packageInfo.applicationInfo.sourceDir = apkFile.absolutePath
+                packageInfo.applicationInfo.publicSourceDir = apkFile.absolutePath
+                val icon = packageInfo.applicationInfo.loadIcon(pm)
+                icon.toBitmap()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
