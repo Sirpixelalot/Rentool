@@ -21,6 +21,43 @@ def _write_progress(progress_file, data):
         pass  # Fail silently - don't crash if progress file write fails
 
 
+def get_extraction_info(rpa_file_path):
+    """
+    Get information about an RPA/ARC archive before extraction
+
+    Args:
+        rpa_file_path: Path to the .rpa or .arc file
+
+    Returns:
+        dict with 'success' (bool), 'total_size' (int), 'file_count' (int), 'message' (str)
+    """
+    try:
+        # Load the archive
+        archive = RenPyArchive(rpa_file_path, verbose=False)
+
+        # Get file count
+        files = archive.list()
+        file_count = len(files)
+
+        # Get total extracted size
+        total_size = archive.get_total_size()
+
+        return dict(
+            success=True,
+            total_size=int(total_size),
+            file_count=int(file_count),
+            message=str('Archive contains {} files, total extracted size: {} bytes'.format(file_count, total_size))
+        )
+
+    except Exception as e:
+        return dict(
+            success=False,
+            total_size=0,
+            file_count=0,
+            message=str('Error reading archive: {}'.format(str(e)))
+        )
+
+
 def extract_rpa(rpa_file_path, output_dir, progress_file=None, batch_index=0, batch_total=0, batch_filename=''):
     """
     Extract all files from an RPA archive

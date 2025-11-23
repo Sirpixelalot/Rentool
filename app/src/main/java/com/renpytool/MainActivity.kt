@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.StatFs
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -259,14 +260,13 @@ class MainActivity : ComponentActivity() {
                 extractPath?.let { path ->
                     // Check if batch or single extraction
                     if (selectedRpaPaths != null && selectedRpaPaths!!.isNotEmpty()) {
-                        // Batch extraction - delegate to ViewModel
+                        // Batch extraction - delegate to ViewModel (no validation for batch yet)
                         launchProgressActivityForBatchExtract(path, selectedRpaPaths!!)
                         viewModel.performBatchExtraction(selectedRpaPaths!!, path)
                     } else {
-                        // Single extraction - delegate to ViewModel
+                        // Single extraction - validate storage first
                         selectedRpaPath?.let { rpaPath ->
-                            launchProgressActivityForExtract(path)
-                            viewModel.performExtraction(rpaPath, path)
+                            validateAndExtract(rpaPath, path)
                         }
                     }
                 }
@@ -563,6 +563,100 @@ class MainActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    /**
+     * Get available storage space at the given path
+     */
+    private fun getAvailableSpace(path: String): Long {
+        return try {
+            val stat = StatFs(path)
+            stat.availableBlocksLong * stat.blockSizeLong
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    /**
+     * Format bytes to human-readable string (GB)
+     */
+    private fun formatSize(bytes: Long): String {
+        val gb = bytes / (1024.0 * 1024.0 * 1024.0)
+        return String.format("%.2f GB", gb)
+    }
+
+    /**
+     * Validate storage before extraction and show warnings/errors
+     */
+    private fun validateAndExtract(rpaPath: String, extractPath: String) {
+        lifecycleScope.launch {
+            try {
+                // Get archive info from Python
+                val python = Python.getInstance()
+                val rpaModule = python.getModule("rpa_wrapper")
+                val result = rpaModule.callAttr("get_extraction_info", rpaPath)
+
+                val success = result.callAttr("__getitem__", "success").toBoolean()
+                if (!success) {
+                    val errorMsg = result.callAttr("__getitem__", "message").toString()
+                    Toast.makeText(this@MainActivity, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                val totalSize = result.callAttr("__getitem__", "total_size").toLong()
+                val fileCount = result.callAttr("__getitem__", "file_count").toInt()
+                val archiveSize = java.io.File(rpaPath).length()
+
+                // Check available storage
+                val availableSpace = getAvailableSpace(extractPath)
+                val expansionRatio = if (archiveSize > 0) totalSize.toDouble() / archiveSize.toDouble() else 0.0
+
+                // CASE 1: Insufficient storage (blocking error)
+                if (totalSize > availableSpace) {
+                    MaterialAlertDialogBuilder(this@MainActivity)
+                        .setTitle("Insufficient Storage")
+                        .setMessage(
+                            "Cannot extract archive:\n\n" +
+                            "Required: ${formatSize(totalSize)}\n" +
+                            "Available: ${formatSize(availableSpace)}\n\n" +
+                            "Free up ${formatSize(totalSize - availableSpace)} of storage and try again."
+                        )
+                        .setPositiveButton("OK", null)
+                        .show()
+                    return@launch
+                }
+
+                // CASE 2: Huge extraction (>10GB or >20x expansion) - warning
+                val sizeThresholdGB = 10L * 1024 * 1024 * 1024 // 10GB
+                val expansionThreshold = 20.0
+
+                if (totalSize > sizeThresholdGB || expansionRatio > expansionThreshold) {
+                    MaterialAlertDialogBuilder(this@MainActivity)
+                        .setTitle("Large Extraction Warning")
+                        .setMessage(
+                            "This archive will extract to ${formatSize(totalSize)} ($fileCount files).\n\n" +
+                            "Archive size: ${formatSize(archiveSize)}\n" +
+                            "Extracted size: ${formatSize(totalSize)}\n" +
+                            "Expansion: ${String.format("%.1fx", expansionRatio)}\n\n" +
+                            "This may take a long time and use significant storage. Continue?"
+                        )
+                        .setPositiveButton("Continue") { _, _ ->
+                            // Proceed with extraction
+                            launchProgressActivityForExtract(extractPath)
+                            viewModel.performExtraction(rpaPath, extractPath)
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    // Normal extraction - proceed immediately
+                    launchProgressActivityForExtract(extractPath)
+                    viewModel.performExtraction(rpaPath, extractPath)
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error checking archive: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     /**

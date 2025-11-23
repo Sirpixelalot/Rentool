@@ -262,7 +262,7 @@ private fun getFileIcon(item: FileItem): Int {
     } else {
         val fileName = item.name.lowercase()
         when {
-            fileName.endsWith(".rpa") || fileName.endsWith(".arc") -> R.drawable.ic_rpa_file
+            fileName.endsWith(".rpa") -> R.drawable.ic_rpa_file
             fileName.endsWith(".rpy") || fileName.endsWith(".rpyc") -> R.drawable.ic_script_file
             fileName.endsWith(".png") || fileName.endsWith(".jpg") ||
             fileName.endsWith(".jpeg") || fileName.endsWith(".webp") -> R.drawable.ic_png_file

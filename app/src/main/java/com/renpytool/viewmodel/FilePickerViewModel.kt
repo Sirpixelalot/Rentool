@@ -104,13 +104,7 @@ class FilePickerViewModel(application: Application) : AndroidViewModel(applicati
                     !file.isDirectory &&
                     state.fileFilter != null) {
                     // Normal file filtering
-                    // Special case: .rpa filter also accepts .arc files
-                    if (state.fileFilter == ".rpa") {
-                        val filename = file.name.lowercase()
-                        if (!filename.endsWith(".rpa") && !filename.endsWith(".arc")) {
-                            continue
-                        }
-                    } else if (!file.name.lowercase().endsWith(state.fileFilter.lowercase())) {
+                    if (!file.name.lowercase().endsWith(state.fileFilter.lowercase())) {
                         continue
                     }
                 }

@@ -69,7 +69,6 @@ class RenPyArchive:
     RPA2_MAGIC = 'RPA-2.0 '
     RPA3_MAGIC = 'RPA-3.0 '
     RPA3_2_MAGIC = 'RPA-3.2 '
-    ARC3_MAGIC = 'ARC-3.0 '
 
     # For backward compatibility, otherwise Python3-packed archives won't be read by Python2
     PICKLE_PROTOCOL = 2
@@ -97,8 +96,6 @@ class RenPyArchive:
             return 3.2
         elif magic.startswith(self.RPA3_MAGIC):
             return 3
-        elif magic.startswith(self.ARC3_MAGIC):
-            return 3  # ARC-3.0 uses same format as RPA-3.0
         elif magic.startswith(self.RPA2_MAGIC):
             return 2
         elif self.file.lower().endswith('.rpi'):
@@ -169,6 +166,24 @@ class RenPyArchive:
     # List files in archive and current internal storage.
     def list(self):
         return list(self.indexes.keys()) + list(self.files.keys())
+
+    # Calculate total size of all files that would be extracted
+    def get_total_size(self):
+        total_size = 0
+
+        # Size from indexed files (from archive)
+        for filename in self.indexes.keys():
+            if len(self.indexes[filename][0]) == 3:
+                (offset, length, prefix) = self.indexes[filename][0]
+            else:
+                (offset, length) = self.indexes[filename][0]
+            total_size += length
+
+        # Size from internal storage (files added but not saved)
+        for filename in self.files.keys():
+            total_size += len(self.files[filename])
+
+        return total_size
 
     # Check if a file exists in the archive.
     def has_file(self, filename):
