@@ -58,3 +58,16 @@
 -keepattributes Signature
 -keepattributes *Annotation*
 -dontwarn sun.misc.**
+
+# Sora Editor - Keep all editor classes and TextMate language support
+-keep class io.github.rosemoe.sora.** { *; }
+-keep interface io.github.rosemoe.sora.** { *; }
+-dontwarn io.github.rosemoe.sora.**
+
+# TextMate language support (reflection-based grammar loading)
+-keep class io.github.rosemoe.sora.langs.textmate.** { *; }
+-keep class org.eclipse.tm4e.** { *; }
+-dontwarn org.eclipse.tm4e.**
+
+# Keep custom editor classes
+-keep class com.renpytool.editor.** { *; }
