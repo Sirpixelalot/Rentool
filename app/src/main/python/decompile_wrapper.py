@@ -26,13 +26,14 @@ def _write_progress(progress_file, data):
         pass  # Fail silently - don't crash if progress file write fails
 
 
-def decompile_directory(source_dir, progress_file=None):
+def decompile_directory(source_dir, progress_file=None, try_harder=False):
     """
     Decompile all .rpyc files in a directory recursively
 
     Args:
         source_dir: Directory containing .rpyc files to decompile
         progress_file: Optional path to write progress JSON updates
+        try_harder: Enable aggressive decompilation for obfuscated files (slower)
 
     Returns:
         dict with 'success' (bool), 'message' (str), 'stats' (dict)
@@ -146,7 +147,7 @@ def decompile_directory(source_dir, progress_file=None):
                     rpyc_file,
                     context,
                     overwrite=False,      # Skip if .rpy already exists
-                    try_harder=False,     # Can enable for obfuscated files
+                    try_harder=try_harder,  # Aggressive mode for obfuscated files
                     dump=False,           # Decompile, don't dump AST
                     comparable=False,
                     no_pyexpr=False,

@@ -473,7 +473,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Perform decompilation of RPYC files
      */
-    fun performDecompile(sourceDirPath: String) {
+    fun performDecompile(sourceDirPath: String, tryHarder: Boolean = false) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val tracker = ProgressTracker(context)
@@ -501,7 +501,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val result = decompileModule.callAttr(
                         "decompile_directory",
                         sourceDirPath,
-                        tracker.progressFilePath
+                        tracker.progressFilePath,
+                        tryHarder
                     )
 
                     if (result == null) {

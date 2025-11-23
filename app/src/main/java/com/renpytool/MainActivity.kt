@@ -309,12 +309,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (!sourcePath.isNullOrEmpty()) {
-                    // Launch progress activity and delegate to ViewModel
-                    val intent = Intent(this, ProgressActivity::class.java).apply {
-                        putExtra("DECOMPILE_PATH", sourcePath)
-                    }
-                    startActivity(intent)
-                    viewModel.performDecompile(sourcePath)
+                    // Show decompile options dialog
+                    showDecompileOptionsDialog(sourcePath)
                 } else {
                     Toast.makeText(this, "No directory selected", Toast.LENGTH_SHORT).show()
                 }
@@ -523,6 +519,50 @@ class MainActivity : ComponentActivity() {
             putExtra(FilePickerActivity.EXTRA_TITLE, "Select Folder with RPYC Files")
         }
         decompileDirPickerLauncher.launch(intent)
+    }
+
+    private fun showDecompileOptionsDialog(sourcePath: String) {
+        // Create custom dialog view with checkbox
+        val dialogView = layoutInflater.inflate(android.R.layout.select_dialog_singlechoice, null)
+        val checkboxView = android.widget.CheckBox(this).apply {
+            text = "Try Harder Mode (slower, for obfuscated files)"
+            setPadding(50, 30, 50, 30)
+            isChecked = false
+        }
+
+        val layout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(50, 20, 50, 20)
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = "Decompile Options"
+                textSize = 16f
+                setPadding(0, 0, 0, 20)
+            })
+            addView(checkboxView)
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = "\nTry Harder Mode performs aggressive decompilation for heavily obfuscated files. " +
+                       "This will take significantly longer.\n\n" +
+                       "Use this only if default decompilation fails."
+                textSize = 12f
+                setPadding(0, 20, 0, 0)
+                setTextColor(android.graphics.Color.GRAY)
+            })
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Decompile Settings")
+            .setView(layout)
+            .setPositiveButton("Start") { _, _ ->
+                val tryHarder = checkboxView.isChecked
+                // Launch progress activity and delegate to ViewModel
+                val intent = Intent(this, ProgressActivity::class.java).apply {
+                    putExtra("DECOMPILE_PATH", sourcePath)
+                }
+                startActivity(intent)
+                viewModel.performDecompile(sourcePath, tryHarder)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     /**
