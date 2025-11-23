@@ -69,6 +69,7 @@ class RenPyArchive:
     RPA2_MAGIC = 'RPA-2.0 '
     RPA3_MAGIC = 'RPA-3.0 '
     RPA3_2_MAGIC = 'RPA-3.2 '
+    ARC3_MAGIC = 'ARC-3.0 '
 
     # For backward compatibility, otherwise Python3-packed archives won't be read by Python2
     PICKLE_PROTOCOL = 2
@@ -96,6 +97,8 @@ class RenPyArchive:
             return 3.2
         elif magic.startswith(self.RPA3_MAGIC):
             return 3
+        elif magic.startswith(self.ARC3_MAGIC):
+            return 3  # ARC-3.0 uses same format as RPA-3.0
         elif magic.startswith(self.RPA2_MAGIC):
             return 2
         elif self.file.lower().endswith('.rpi'):
