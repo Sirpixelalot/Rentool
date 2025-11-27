@@ -104,8 +104,11 @@ class OperationService : Service() {
     }
 
     private fun createNotification(text: String, progress: Int, maxProgress: Int = 100): Notification {
+        // Create explicit intent for security - specifies exact component
         val intent = Intent(this, ProgressActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            // Explicitly set the component to make this a fully explicit intent
+            component = android.content.ComponentName(this@OperationService, ProgressActivity::class.java)
         }
 
         val pendingIntent = PendingIntent.getActivity(
