@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -34,6 +35,7 @@ import com.renpytool.keystore.KeystoreInfo
 import com.renpytool.keystore.KeystoreManager
 import com.renpytool.keystore.SigningOption
 import com.renpytool.ui.CompressionSettingsDialog
+import com.renpytool.ui.DecompileOptionsDialogContent
 import com.renpytool.ui.KeystoreSelectionDialog
 import com.renpytool.ui.MainScreenContent
 import com.renpytool.ui.RandomKeyWarningDialog
@@ -80,6 +82,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
+
         // Initialize Python (must be done before ViewModel access)
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
@@ -87,6 +92,9 @@ class MainActivity : ComponentActivity() {
 
         // Initialize file picker launchers
         initFilePickerLaunchers()
+
+        // Store initial theme mode from SharedPreferences (source of truth)
+        currentThemeMode = ThemeUtils.getThemeMode(this)
 
         // Set up Compose UI
         setupMainUI()
@@ -99,13 +107,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupMainUI() {
+        // Set transparent window background for proper theming in Compose
+        window.setBackgroundDrawableResource(android.R.color.transparent)
+
         setContent {
-            val themeMode by viewModel.themeMode.collectAsState()
-            val darkTheme = when (themeMode) {
-                MainViewModel.ThemeMode.LIGHT -> false
-                MainViewModel.ThemeMode.DARK -> true
-                MainViewModel.ThemeMode.SYSTEM -> isSystemInDarkTheme()
-            }
+            // Read theme directly from SharedPreferences (source of truth)
+            // Don't use ViewModel - it's cached and survives recreate()
+            val themeMode = ThemeUtils.getThemeMode(this)
+            val darkTheme = ThemeUtils.shouldUseDarkTheme(themeMode)
 
             RenpytoolTheme(darkTheme = darkTheme) {
                 MainScreen()
@@ -140,9 +149,24 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private var currentThemeMode: MainViewModel.ThemeMode? = null
+
     private fun startSettingsActivity() {
         val intent = Intent(this, SettingsActivity::class.java)
         startActivity(intent)
+    }
+
+    private fun checkThemeChange() {
+        // Read theme from SharedPreferences (source of truth)
+        // ViewModel might have stale value from another activity instance
+        val newThemeMode = ThemeUtils.getThemeMode(this)
+        if (currentThemeMode != null && currentThemeMode != newThemeMode) {
+            // Theme changed, recreate activity
+            currentThemeMode = newThemeMode
+            recreate()
+            return
+        }
+        currentThemeMode = newThemeMode
     }
 
 
@@ -330,6 +354,7 @@ class MainActivity : ComponentActivity() {
                     // Start decompile with the extracted path - delegate to ViewModel
                     val intent = Intent(this, ProgressActivity::class.java).apply {
                         putExtra("DECOMPILE_PATH", chainPath)
+                        putExtra("OPERATION_TYPE", "decompile")
                     }
                     startActivity(intent)
                     viewModel.performDecompile(chainPath)
@@ -522,47 +547,58 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showDecompileOptionsDialog(sourcePath: String) {
-        // Create custom dialog view with checkbox
-        val dialogView = layoutInflater.inflate(android.R.layout.select_dialog_singlechoice, null)
-        val checkboxView = android.widget.CheckBox(this).apply {
-            text = "Try Harder Mode (slower, for obfuscated files)"
-            setPadding(50, 30, 50, 30)
-            isChecked = false
-        }
+        // Check if user has disabled the dialog
+        val prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE)
+        val dontShowDialog = prefs.getBoolean("dont_show_decompile_dialog", false)
 
-        val layout = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(50, 20, 50, 20)
-            addView(android.widget.TextView(this@MainActivity).apply {
-                text = "Decompile Options"
-                textSize = 16f
-                setPadding(0, 0, 0, 20)
-            })
-            addView(checkboxView)
-            addView(android.widget.TextView(this@MainActivity).apply {
-                text = "\nTry Harder Mode performs aggressive decompilation for heavily obfuscated files. " +
-                       "This will take significantly longer.\n\n" +
-                       "Use this only if default decompilation fails."
-                textSize = 12f
-                setPadding(0, 20, 0, 0)
-                setTextColor(android.graphics.Color.GRAY)
-            })
-        }
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Decompile Settings")
-            .setView(layout)
-            .setPositiveButton("Start") { _, _ ->
-                val tryHarder = checkboxView.isChecked
-                // Launch progress activity and delegate to ViewModel
-                val intent = Intent(this, ProgressActivity::class.java).apply {
-                    putExtra("DECOMPILE_PATH", sourcePath)
-                }
-                startActivity(intent)
-                viewModel.performDecompile(sourcePath, tryHarder)
+        if (dontShowDialog) {
+            // Skip dialog and proceed with default settings (tryHarder = false)
+            val intent = Intent(this, ProgressActivity::class.java).apply {
+                putExtra("DECOMPILE_PATH", sourcePath)
+                putExtra("OPERATION_TYPE", "decompile")
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            startActivity(intent)
+            viewModel.performDecompile(sourcePath, false)
+            return
+        }
+
+        // Use Compose dialog for proper theming
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        dialog.setOnShowListener {
+            val composeView = androidx.compose.ui.platform.ComposeView(this).apply {
+                setContent {
+                    val themeMode = ThemeUtils.getThemeMode(this@MainActivity)
+                    val darkTheme = ThemeUtils.shouldUseDarkTheme(themeMode)
+
+                    RenpytoolTheme(darkTheme = darkTheme) {
+                        DecompileOptionsDialogContent(
+                            onStart = { tryHarder, dontShowAgain ->
+                                // Save preference if user checked "Don't show again"
+                                if (dontShowAgain) {
+                                    prefs.edit().putBoolean("dont_show_decompile_dialog", true).apply()
+                                }
+
+                                dialog.dismiss()
+                                val intent = Intent(this@MainActivity, ProgressActivity::class.java).apply {
+                                    putExtra("DECOMPILE_PATH", sourcePath)
+                                    putExtra("OPERATION_TYPE", "decompile")
+                                }
+                                startActivity(intent)
+                                viewModel.performDecompile(sourcePath, tryHarder)
+                            },
+                            onCancel = { dialog.dismiss() }
+                        )
+                    }
+                }
+            }
+            dialog.setContentView(composeView)
+        }
+
+        dialog.show()
     }
 
     /**
@@ -802,6 +838,9 @@ class MainActivity : ComponentActivity() {
         val keystoreManager = KeystoreManager(this)
         val availableKeystores = keystoreManager.listKeystores()
 
+        // Set transparent window background for proper theming
+        window.setBackgroundDrawableResource(android.R.color.transparent)
+
         setContent {
             RenpytoolTheme(
                 darkTheme = when (viewModel.themeMode.value) {
@@ -854,6 +893,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showRandomKeyWarningDialog() {
+        // Set transparent window background for proper theming
+        window.setBackgroundDrawableResource(android.R.color.transparent)
+
         setContent {
             RenpytoolTheme(
                 darkTheme = when (viewModel.themeMode.value) {
@@ -888,6 +930,9 @@ class MainActivity : ComponentActivity() {
         // Load saved settings
         val settings = CompressionSettings.load(this)
 
+        // Set transparent window background for proper theming
+        window.setBackgroundDrawableResource(android.R.color.transparent)
+
         // Show settings dialog using Compose
         setContent {
             RenpytoolTheme(
@@ -903,7 +948,9 @@ class MainActivity : ComponentActivity() {
                         // Save settings
                         newSettings.save(this@MainActivity)
                         // Start compression
-                        val intent = Intent(this@MainActivity, ProgressActivity::class.java)
+                        val intent = Intent(this@MainActivity, ProgressActivity::class.java).apply {
+                            putExtra("OPERATION_TYPE", "compress")
+                        }
                         startActivity(intent)
                         viewModel.performCompression(sourcePath, outputPath, newSettings, signingOption)
                         // Reset to main UI
@@ -1025,6 +1072,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Recreate activity if theme changed while in settings
+        checkThemeChange()
         // Update edit status when returning from editor
         viewModel.updateEditStatus()
     }

@@ -69,6 +69,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // 16KB page alignment for Android 15+ compatibility
+    // AGP 8.7+ automatically handles alignment when useLegacyPackaging = false
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 dependencies {

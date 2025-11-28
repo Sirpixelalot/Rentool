@@ -5,10 +5,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
@@ -27,6 +29,9 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
 
         // Initialize file pickers
         initFilePickerLaunchers()
@@ -64,15 +69,24 @@ class SettingsActivity : ComponentActivity() {
 
     private fun setupUI() {
         setContent {
+            // Observe theme mode reactively
+            val themeMode by viewModel.themeMode.collectAsState()
+
+            // Read decompile dialog preference
+            val prefs = getSharedPreferences("RentoolPrefs", MODE_PRIVATE)
+            var showDecompileDialog by remember {
+                mutableStateOf(!prefs.getBoolean("dont_show_decompile_dialog", false))
+            }
+
             RenpytoolTheme(
-                darkTheme = when (viewModel.themeMode.value) {
+                darkTheme = when (themeMode) {
                     MainViewModel.ThemeMode.LIGHT -> false
                     MainViewModel.ThemeMode.DARK -> true
                     MainViewModel.ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 }
             ) {
                 SettingsScreen(
-                    themeMode = viewModel.themeMode.value,
+                    themeMode = themeMode,
                     onThemeModeChange = { newMode ->
                         viewModel.setThemeMode(newMode)
                     },
@@ -84,6 +98,11 @@ class SettingsActivity : ComponentActivity() {
                     },
                     onExportKeystores = {
                         launchKeystoreExportPicker()
+                    },
+                    showDecompileDialog = showDecompileDialog,
+                    onShowDecompileDialogChange = { show ->
+                        showDecompileDialog = show
+                        prefs.edit().putBoolean("dont_show_decompile_dialog", !show).apply()
                     }
                 )
             }

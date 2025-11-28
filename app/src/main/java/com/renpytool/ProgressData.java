@@ -12,6 +12,7 @@ public class ProgressData {
     public long lastUpdateTime;        // Last update timestamp (milliseconds)
     public String status;              // "in_progress", "completed", "failed"
     public String errorMessage;        // If failed
+    public long operationId;           // Unique ID to distinguish different operations (timestamp)
 
     // Batch operation support
     public int currentBatchIndex;      // Current item in batch (1-based, 0 = no batch)

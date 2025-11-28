@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Rentool</string>
+
+    <!-- File item placeholders -->
+    <string name="file_name_placeholder">File name</string>
+    <string name="details_placeholder">Details</string>
+    <string name="select_file">Select file</string>
+    <string name="file_icon">File icon</string>
+    <string name="folder_icon">Folder icon</string>
+
+    <!-- Main screen -->
+    <string name="extract_icon">Extract RPA archive</string>
+    <string name="create_icon">Create RPA archive</string>
+    <string name="decompile_icon">Decompile RPYC files</string>
+    <string name="edit_icon">Edit RPY files</string>
+    <string name="compress_icon">Compress files</string>
 </resources>

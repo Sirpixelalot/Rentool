@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.chaquo.python.PyObject
 import com.chaquo.python.Python
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,20 @@ import java.io.FileOutputStream
  * Handles all business logic and state management using coroutines and StateFlow
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        // Static reference to the current active ViewModel instance
+        // This allows OperationService to cancel the operation when user clicks cancel
+        private var activeInstance: MainViewModel? = null
+
+        /**
+         * Cancel the operation in the currently active ViewModel
+         * Called from OperationService when user cancels
+         */
+        fun cancelActiveOperation() {
+            activeInstance?.cancelCurrentOperation()
+        }
+    }
 
     private val context: Context = application.applicationContext
     private val prefs: SharedPreferences = context.getSharedPreferences("RentoolPrefs", Context.MODE_PRIVATE)
@@ -55,6 +70,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _cardsEnabled = MutableStateFlow(true)
     val cardsEnabled: StateFlow<Boolean> = _cardsEnabled.asStateFlow()
 
+    // Track current operation job for cancellation
+    private var currentOperationJob: Job? = null
+
+    /**
+     * Cancel the current operation and clear progress
+     * Called when user cancels via ProgressActivity
+     */
+    fun cancelCurrentOperation() {
+        currentOperationJob?.cancel()
+        currentOperationJob = null
+
+        // Clear progress file to prevent stale data
+        val tracker = ProgressTracker(context)
+        tracker.clearProgress()
+
+        Log.i("MainViewModel", "Canceled current operation and cleared progress")
+    }
+
+    /**
+     * Create a new ProgressData with operation ID set
+     * This ensures all progress data has a unique ID to prevent stale data issues
+     */
+    private fun createProgressData(): ProgressData {
+        return ProgressData().apply {
+            operationId = System.currentTimeMillis()
+        }
+    }
+
     // Theme mode state
     enum class ThemeMode {
         SYSTEM, LIGHT, DARK;
@@ -72,8 +115,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     init {
+        // Register this as the active instance for operation cancellation
+        activeInstance = this
+
         // Load edit status from SharedPreferences
         updateEditStatus()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Clear active instance when ViewModel is destroyed
+        if (activeInstance == this) {
+            activeInstance = null
+        }
     }
 
     /**
@@ -114,13 +168,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Perform batch extraction of RPA files
      */
     fun performBatchExtraction(rpaFilePaths: ArrayList<String>, extractDirPath: String) {
-        viewModelScope.launch {
+        // Cancel any existing operation first
+        currentOperationJob?.cancel()
+
+        currentOperationJob = viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val tracker = ProgressTracker(context)
                 tracker.clearProgress()
 
                 // Write initial progress BEFORE starting service
-                val initialData = ProgressData().apply {
+                val initialData = createProgressData().apply {
                     operation = "extract"
                     status = "in_progress"
                     startTime = System.currentTimeMillis()
@@ -176,7 +233,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         // Update progress with error
                         try {
-                            val errorData = ProgressData().apply {
+                            val errorData = createProgressData().apply {
                                 operation = "extract"
                                 status = "failed"
                                 errorMessage = "Error on file $currentIndex/$totalFiles: ${e.message}"
@@ -193,7 +250,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Mark as completed
                 try {
-                    val completeData = ProgressData().apply {
+                    val completeData = createProgressData().apply {
                         operation = "extract"
                         status = "completed"
                         currentBatchIndex = totalFiles
@@ -218,14 +275,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Perform single file extraction
      */
     fun performExtraction(rpaFilePath: String, extractDirPath: String) {
-        viewModelScope.launch {
+        // Cancel any existing operation first
+        currentOperationJob?.cancel()
+
+        currentOperationJob = viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val tracker = ProgressTracker(context)
                 tracker.clearProgress()
 
                 try {
                     // Initialize progress BEFORE starting service
-                    val initialData = ProgressData().apply {
+                    val initialData = createProgressData().apply {
                         operation = "extract"
                         status = "in_progress"
                         startTime = System.currentTimeMillis()
@@ -270,7 +330,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Update progress with error
                     try {
-                        val errorData = ProgressData().apply {
+                        val errorData = createProgressData().apply {
                             operation = "extract"
                             status = "failed"
                             errorMessage = "Error: ${e.message}"
@@ -312,7 +372,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val itemName = sourceFile.name
 
                         // Update progress
-                        val copyProgress = ProgressData().apply {
+                        val copyProgress = createProgressData().apply {
                             operation = "create"
                             currentBatchIndex = i + 1
                             totalBatchCount = totalItems
@@ -336,7 +396,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     // Update progress for RPA creation
-                    val createProgress = ProgressData().apply {
+                    val createProgress = createProgressData().apply {
                         operation = "create"
                         currentBatchIndex = totalItems
                         totalBatchCount = totalItems
@@ -381,7 +441,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Update progress with error
                     try {
-                        val errorData = ProgressData().apply {
+                        val errorData = createProgressData().apply {
                             operation = "create"
                             status = "failed"
                             errorMessage = "Error: ${e.message}"
@@ -402,14 +462,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Perform single archive creation
      */
     fun performCreation(sourceDirPath: String, outputFilePath: String) {
-        viewModelScope.launch {
+        // Cancel any existing operation first
+        currentOperationJob?.cancel()
+
+        currentOperationJob = viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val tracker = ProgressTracker(context)
                 tracker.clearProgress()
 
                 try {
                     // Initialize progress BEFORE starting service
-                    val initialData = ProgressData().apply {
+                    val initialData = createProgressData().apply {
                         operation = "create"
                         status = "in_progress"
                         startTime = System.currentTimeMillis()
@@ -456,7 +519,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Update progress with error
                     try {
-                        val errorData = ProgressData().apply {
+                        val errorData = createProgressData().apply {
                             operation = "create"
                             status = "failed"
                             errorMessage = "Error: ${e.message}"
@@ -474,14 +537,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Perform decompilation of RPYC files
      */
     fun performDecompile(sourceDirPath: String, tryHarder: Boolean = false) {
-        viewModelScope.launch {
+        // Cancel any existing operation first
+        currentOperationJob?.cancel()
+
+        currentOperationJob = viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val tracker = ProgressTracker(context)
                 tracker.clearProgress()
 
                 try {
                     // Initialize progress BEFORE starting service
-                    val initialData = ProgressData().apply {
+                    val initialData = createProgressData().apply {
                         operation = "decompile"
                         status = "in_progress"
                         startTime = System.currentTimeMillis()
@@ -538,7 +604,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     // Update progress with error
                     try {
-                        val errorData = ProgressData().apply {
+                        val errorData = createProgressData().apply {
                             operation = "decompile"
                             status = "failed"
                             errorMessage = "Error: ${e.message}"
@@ -607,7 +673,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         settings: CompressionSettings,
         signingOption: com.renpytool.keystore.SigningOption? = null
     ) {
-        viewModelScope.launch {
+        // Cancel any existing operation first
+        currentOperationJob?.cancel()
+
+        currentOperationJob = viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val sourceFile = File(sourceDirPath)
 
@@ -646,7 +715,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Initialize progress BEFORE starting service
-            val initialData = ProgressData().apply {
+            val initialData = createProgressData().apply {
                 operation = "compress_apk"
                 status = "in_progress"
                 startTime = System.currentTimeMillis()
@@ -703,7 +772,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         try {
             // Initialize progress BEFORE starting service
-            val initialData = ProgressData().apply {
+            val initialData = createProgressData().apply {
                 operation = "compress"
                 status = "in_progress"
                 startTime = System.currentTimeMillis()
@@ -750,7 +819,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         Log.i("MainViewModel", "Creating RPA archive from compressed output...")
 
                         // Update progress for RPA creation phase
-                        val rpaProgress = ProgressData().apply {
+                        val rpaProgress = createProgressData().apply {
                             operation = "create"
                             status = "in_progress"
                             startTime = System.currentTimeMillis()

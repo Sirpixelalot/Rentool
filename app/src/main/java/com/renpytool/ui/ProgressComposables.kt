@@ -1,10 +1,15 @@
 package com.renpytool.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,12 +31,19 @@ fun ProgressScreen(
     uiState: ProgressUiState,
     onDecompileClick: () -> Unit,
     onDoneClick: () -> Unit,
+    onCancelClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    Surface(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        color = MaterialTheme.colorScheme.background
     ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -51,18 +63,40 @@ fun ProgressScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Percentage display
+            // Percentage display with pulse animation
+            val infiniteTransition = rememberInfiniteTransition(label = "percentage_pulse")
+            val pulseScale by infiniteTransition.animateFloat(
+                initialValue = 0.98f,
+                targetValue = 1.02f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1000, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse_scale"
+            )
+
             Text(
                 text = "${uiState.percentage}%",
                 style = MaterialTheme.typography.displayLarge,
                 fontSize = 72.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = if (!uiState.isCompleted && !uiState.isFailed) {
+                    Modifier.scale(pulseScale)
+                } else {
+                    Modifier
+                }
             )
 
-            // Progress bar
+            // Progress bar with animated progress
+            val animatedProgress by animateFloatAsState(
+                targetValue = uiState.percentage / 100f,
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                label = "progress_animation"
+            )
+
             LinearProgressIndicator(
-                progress = { uiState.percentage / 100f },
+                progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(12.dp),
@@ -122,6 +156,48 @@ fun ProgressScreen(
                     }
                 }
             }
+
+            // Cancel button (only shown when operation is in progress)
+            if (!uiState.isCompleted && !uiState.isFailed && onCancelClick != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = { showCancelDialog = true },
+                    modifier = Modifier.fillMaxWidth(0.7f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Cancel Operation")
+                }
+            }
+        }
+
+        // Cancel confirmation dialog
+        if (showCancelDialog) {
+            AlertDialog(
+                onDismissRequest = { showCancelDialog = false },
+                title = { Text("Cancel Operation?") },
+                text = { Text("Are you sure you want to cancel this operation? Progress will be lost.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showCancelDialog = false
+                            onCancelClick?.invoke()
+                        }
+                    ) {
+                        Text("Cancel Operation")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCancelDialog = false }) {
+                        Text("Continue")
+                    }
+                }
+            )
         }
 
         // Completion dialogs
@@ -154,6 +230,7 @@ fun ProgressScreen(
                 errorMessage = uiState.errorMessage ?: "Operation failed",
                 onDoneClick = onDoneClick
             )
+        }
         }
     }
 }

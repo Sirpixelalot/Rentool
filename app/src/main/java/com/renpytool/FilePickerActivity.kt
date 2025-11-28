@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,9 +35,13 @@ class FilePickerActivity : ComponentActivity() {
     }
 
     private val viewModel: FilePickerViewModel by viewModels()
+    private var currentThemeMode: MainViewModel.ThemeMode? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
 
         // Get intent extras
         val mode = intent.getIntExtra(EXTRA_MODE, MODE_FILE)
@@ -47,8 +52,14 @@ class FilePickerActivity : ComponentActivity() {
         // Initialize ViewModel
         viewModel.initialize(mode, fileFilter, startPath)
 
+        // Store initial theme mode
+        currentThemeMode = ThemeUtils.getThemeMode(this)
+
         setContent {
-            RenpytoolTheme {
+            val themeMode = ThemeUtils.getThemeMode(this)
+            val darkTheme = ThemeUtils.shouldUseDarkTheme(themeMode)
+
+            RenpytoolTheme(darkTheme = darkTheme) {
                 val uiState by viewModel.uiState.collectAsState()
 
                 FilePickerScreen(
@@ -57,10 +68,24 @@ class FilePickerActivity : ComponentActivity() {
                     onFileItemClick = { item -> onFileItemClick(item, uiState) },
                     onFileItemLongClick = { item -> onFileItemLongClick(item) },
                     onNavigationClick = { handleNavigationClick(uiState) },
-                    onFabClick = { confirmSelection(uiState) }
+                    onFabClick = { confirmSelection(uiState) },
+                    onBreadcrumbClick = { directory -> viewModel.navigateToDirectory(directory) }
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkThemeChange()
+    }
+
+    private fun checkThemeChange() {
+        val newThemeMode = ThemeUtils.getThemeMode(this)
+        if (currentThemeMode != null && currentThemeMode != newThemeMode) {
+            recreate()
+        }
+        currentThemeMode = newThemeMode
     }
 
     private fun onFileItemClick(item: FileItem, uiState: FilePickerUiState) {

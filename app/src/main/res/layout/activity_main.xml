@@ -31,25 +31,26 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_md">
 
             <!-- Extract Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_extract"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/card_margin_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="16dp"
+                android:stateListAnimator="@animator/card_state_animator"
+                app:cardElevation="@dimen/card_elevation"
+                app:cardCornerRadius="@dimen/card_corner_radius"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="@dimen/card_padding">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -58,32 +59,32 @@
                         android:gravity="center_vertical">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_large"
+                            android:layout_height="@dimen/icon_size_large"
                             android:src="@drawable/ic_extract"
                             app:tint="?attr/colorPrimary"
-                            android:contentDescription="Extract icon" />
+                            android:contentDescription="@string/extract_icon" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical"
-                            android:layout_marginStart="16dp">
+                            android:layout_marginStart="@dimen/spacing_md">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Extract RPA"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                                android:textAppearance="@style/TextAppearance.Rentool.TitleLarge" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/spacing_xxs"
                                 android:text="Extract files from RPA archive"
-                                android:textSize="14sp" />
+                                android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                         </LinearLayout>
 
@@ -93,10 +94,10 @@
                         android:id="@+id/tv_extract_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_sm"
                         android:text="No files extracted yet"
-                        android:textSize="12sp"
-                        android:fontFamily="monospace" />
+                        android:textAppearance="@style/TextAppearance.Rentool.LabelMedium.Monospace"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -107,18 +108,19 @@
                 android:id="@+id/card_create"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/card_margin_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="16dp"
+                android:stateListAnimator="@animator/card_state_animator"
+                app:cardElevation="@dimen/card_elevation"
+                app:cardCornerRadius="@dimen/card_corner_radius"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="@dimen/card_padding">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -127,32 +129,32 @@
                         android:gravity="center_vertical">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_large"
+                            android:layout_height="@dimen/icon_size_large"
                             android:src="@drawable/ic_create"
                             app:tint="?attr/colorPrimary"
-                            android:contentDescription="Create icon" />
+                            android:contentDescription="@string/create_icon" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical"
-                            android:layout_marginStart="16dp">
+                            android:layout_marginStart="@dimen/spacing_md">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Create RPA"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                                android:textAppearance="@style/TextAppearance.Rentool.TitleLarge" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/spacing_xxs"
                                 android:text="Create RPA archive from directory"
-                                android:textSize="14sp" />
+                                android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                         </LinearLayout>
 
@@ -162,10 +164,10 @@
                         android:id="@+id/tv_create_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_sm"
                         android:text="No archive created yet"
-                        android:textSize="12sp"
-                        android:fontFamily="monospace" />
+                        android:textAppearance="@style/TextAppearance.Rentool.LabelMedium.Monospace"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -176,18 +178,19 @@
                 android:id="@+id/card_decompile"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/card_margin_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="16dp"
+                android:stateListAnimator="@animator/card_state_animator"
+                app:cardElevation="@dimen/card_elevation"
+                app:cardCornerRadius="@dimen/card_corner_radius"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="@dimen/card_padding">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -196,32 +199,32 @@
                         android:gravity="center_vertical">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_large"
+                            android:layout_height="@dimen/icon_size_large"
                             android:src="@drawable/ic_decompile"
                             app:tint="?attr/colorPrimary"
-                            android:contentDescription="Decompile icon" />
+                            android:contentDescription="@string/decompile_icon" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical"
-                            android:layout_marginStart="16dp">
+                            android:layout_marginStart="@dimen/spacing_md">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Decompile RPYC"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                                android:textAppearance="@style/TextAppearance.Rentool.TitleLarge" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/spacing_xxs"
                                 android:text="Decompile .rpyc files to .rpy scripts"
-                                android:textSize="14sp" />
+                                android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                         </LinearLayout>
 
@@ -231,10 +234,10 @@
                         android:id="@+id/tv_decompile_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_sm"
                         android:text="No files decompiled yet"
-                        android:textSize="12sp"
-                        android:fontFamily="monospace" />
+                        android:textAppearance="@style/TextAppearance.Rentool.LabelMedium.Monospace"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -245,18 +248,19 @@
                 android:id="@+id/card_edit_rpy"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/card_margin_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="16dp"
+                android:stateListAnimator="@animator/card_state_animator"
+                app:cardElevation="@dimen/card_elevation"
+                app:cardCornerRadius="@dimen/card_corner_radius"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="@dimen/card_padding">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -265,32 +269,32 @@
                         android:gravity="center_vertical">
 
                         <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_large"
+                            android:layout_height="@dimen/icon_size_large"
                             android:src="@drawable/ic_edit_rpy"
                             app:tint="?attr/colorPrimary"
-                            android:contentDescription="Edit icon" />
+                            android:contentDescription="@string/edit_icon" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical"
-                            android:layout_marginStart="16dp">
+                            android:layout_marginStart="@dimen/spacing_md">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Edit RPY Files"
-                                android:textSize="20sp"
-                                android:textStyle="bold" />
+                                android:textAppearance="@style/TextAppearance.Rentool.TitleLarge" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="@dimen/spacing_xxs"
                                 android:text="Browse and edit .rpy script files"
-                                android:textSize="14sp" />
+                                android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                         </LinearLayout>
 
@@ -300,10 +304,10 @@
                         android:id="@+id/tv_edit_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_sm"
                         android:text="No files edited yet"
-                        android:textSize="12sp"
-                        android:fontFamily="monospace" />
+                        android:textAppearance="@style/TextAppearance.Rentool.LabelMedium.Monospace"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -313,28 +317,32 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardElevation="2dp"
-                app:cardCornerRadius="12dp">
+                android:layout_marginTop="@dimen/spacing_xs"
+                app:cardElevation="0dp"
+                app:cardCornerRadius="@dimen/card_corner_radius"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/card_padding">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="About"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.Rentool.TitleMedium" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_xs"
                         android:text="Rentool allows you to extract and create RPA archives, and decompile RPYC scripts used by Ren'Py visual novels. Tap the cards above to get started."
-                        android:textSize="14sp" />
+                        android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 

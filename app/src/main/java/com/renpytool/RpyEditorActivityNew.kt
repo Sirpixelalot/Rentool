@@ -41,6 +41,7 @@ class RpyEditorActivityNew : AppCompatActivity() {
 
     private lateinit var editorManager: EditorManager
     private lateinit var codeEditor: CodeEditor
+    private var currentThemeMode: MainViewModel.ThemeMode? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,8 +76,14 @@ class RpyEditorActivityNew : AppCompatActivity() {
             saveLastEditedFile(filePath)
         }
 
+        // Store initial theme mode
+        currentThemeMode = ThemeUtils.getThemeMode(this)
+
         setContent {
-            RenpytoolTheme {
+            val themeMode = ThemeUtils.getThemeMode(this)
+            val darkTheme = ThemeUtils.shouldUseDarkTheme(themeMode)
+
+            RenpytoolTheme(darkTheme = darkTheme) {
                 Column(
                     Modifier
                         .fillMaxSize()
@@ -141,6 +148,19 @@ class RpyEditorActivityNew : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkThemeChange()
+    }
+
+    private fun checkThemeChange() {
+        val newThemeMode = ThemeUtils.getThemeMode(this)
+        if (currentThemeMode != null && currentThemeMode != newThemeMode) {
+            recreate()
+        }
+        currentThemeMode = newThemeMode
     }
 
     override fun onBackPressed() {

@@ -42,6 +42,7 @@ public class ProgressTracker {
         json.put("lastUpdateTime", data.lastUpdateTime);
         json.put("status", data.status);
         json.put("errorMessage", data.errorMessage != null ? data.errorMessage : "");
+        json.put("operationId", data.operationId);
 
         // Batch operation fields
         json.put("currentBatchIndex", data.currentBatchIndex);
@@ -85,6 +86,7 @@ public class ProgressTracker {
             data.lastUpdateTime = json.optLong("lastUpdateTime", 0);
             data.status = json.optString("status", "in_progress");
             data.errorMessage = json.optString("errorMessage", "");
+            data.operationId = json.optLong("operationId", 0);
 
             // Batch operation fields
             data.currentBatchIndex = json.optInt("currentBatchIndex", 0);
@@ -112,11 +114,20 @@ public class ProgressTracker {
 
     /**
      * Clear/delete the progress file
+     * Returns true if file was deleted or didn't exist
      */
-    public void clearProgress() {
+    public boolean clearProgress() {
         if (progressFile.exists()) {
-            progressFile.delete();
+            boolean deleted = progressFile.delete();
+            // Give filesystem time to complete deletion to prevent race conditions
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return deleted;
         }
+        return true;
     }
 
     /**

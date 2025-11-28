@@ -29,174 +29,142 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
+            android:padding="@dimen/spacing_md"
             android:gravity="center">
 
             <!-- Main Progress Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="16dp">
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardElevation="@dimen/card_elevation"
+                app:cardCornerRadius="@dimen/card_corner_radius">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="24dp"
-                    android:gravity="center">
+                    android:padding="@dimen/spacing_lg">
 
                     <!-- Operation Type -->
                     <TextView
                         android:id="@+id/tv_operation"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Extracting RPA..."
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:maxLines="3"
-                        android:layout_marginBottom="24dp" />
+                        android:textAppearance="@style/TextAppearance.Rentool.TitleLarge"
+                        android:gravity="start"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:layout_marginBottom="@dimen/spacing_lg" />
 
-                    <!-- Large Percentage Display -->
-                    <TextView
-                        android:id="@+id/tv_percentage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0%"
-                        android:textSize="72sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="16dp" />
-
-                    <!-- Progress Bar -->
-                    <ProgressBar
-                        android:id="@+id/progress_bar"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="8dp"
-                        android:max="100"
-                        android:progress="0"
-                        android:progressTint="?attr/colorPrimary"
-                        android:layout_marginBottom="8dp" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Details Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <!-- File Count -->
+                    <!-- Progress bar with percentage inline -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:layout_marginBottom="12dp">
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="@dimen/spacing_xs">
+
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/progress_bar"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:max="100"
+                            android:progress="0"
+                            app:indicatorColor="?attr/colorPrimary"
+                            app:trackColor="?attr/colorSurfaceVariant"
+                            app:trackCornerRadius="@dimen/progress_bar_corner_radius"
+                            app:trackThickness="@dimen/progress_bar_height" />
 
                         <TextView
-                            android:layout_width="0dp"
+                            android:id="@+id/tv_percentage"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Files:"
-                            android:textSize="16sp" />
+                            android:layout_marginStart="@dimen/spacing_sm"
+                            android:text="0%"
+                            android:textAppearance="@style/TextAppearance.Rentool.TitleMedium"
+                            android:minWidth="48dp"
+                            android:gravity="end" />
+
+                    </LinearLayout>
+
+                    <!-- File count and ETA -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="@dimen/spacing_xs">
 
                         <TextView
                             android:id="@+id/tv_file_count"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0/0"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:fontFamily="monospace" />
-
-                    </LinearLayout>
-
-                    <!-- Current File -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="12dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Current file:"
-                            android:textSize="14sp"
-                            android:layout_marginBottom="4dp" />
-
-                        <TextView
-                            android:id="@+id/tv_current_file"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Initializing..."
-                            android:textSize="12sp"
-                            android:fontFamily="monospace"
-                            android:ellipsize="middle"
-                            android:singleLine="true" />
-
-                    </LinearLayout>
-
-                    <!-- Processing Speed -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="12dp">
-
-                        <TextView
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Speed:"
-                            android:textSize="16sp" />
-
-                        <TextView
-                            android:id="@+id/tv_speed"
-                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="calculating..."
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:fontFamily="monospace" />
-
-                    </LinearLayout>
-
-                    <!-- ETA -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Remaining:"
-                            android:textSize="16sp" />
+                            android:text="0 of 0 files"
+                            android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
 
                         <TextView
                             android:id="@+id/tv_eta"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="calculating..."
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:fontFamily="monospace" />
+                            android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
 
                     </LinearLayout>
+
+                    <!-- Current file name -->
+                    <TextView
+                        android:id="@+id/tv_current_file"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:text="Initializing..."
+                        android:textAppearance="@style/TextAppearance.Rentool.LabelMedium.Monospace"
+                        android:ellipsize="middle"
+                        android:singleLine="true"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:alpha="0.7" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Speed Card (Optional - can show additional metrics) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardElevation="0dp"
+                app:cardCornerRadius="@dimen/card_corner_radius"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/spacing_md"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Processing Speed"
+                        android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/tv_speed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="calculating..."
+                        android:textAppearance="@style/TextAppearance.Rentool.TitleMedium"
+                        android:fontFamily="monospace" />
 
                 </LinearLayout>
 
@@ -207,9 +175,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Please wait while the operation completes..."
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Rentool.BodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:gravity="center"
-                android:layout_marginTop="16dp" />
+                android:layout_marginTop="@dimen/spacing_md" />
 
         </LinearLayout>
 

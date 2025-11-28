@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,9 +21,13 @@ import com.renpytool.viewmodel.ProgressViewModel
 class ProgressActivity : ComponentActivity() {
 
     private val viewModel: ProgressViewModel by viewModels()
+    private var currentThemeMode: MainViewModel.ThemeMode? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
 
         // Keep screen on during operations
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -32,12 +37,19 @@ class ProgressActivity : ComponentActivity() {
         val batchTotal = intent.getIntExtra("BATCH_TOTAL", 0)
         val batchFiles = intent.getStringArrayListExtra("BATCH_FILES")
         val extractPath = intent.getStringExtra("EXTRACT_PATH")
+        val expectedOperation = intent.getStringExtra("OPERATION_TYPE")
 
         // Initialize ViewModel
-        viewModel.initialize(batchMode, batchTotal, batchFiles, extractPath)
+        viewModel.initialize(batchMode, batchTotal, batchFiles, extractPath, expectedOperation)
+
+        // Store initial theme mode
+        currentThemeMode = ThemeUtils.getThemeMode(this)
 
         setContent {
-            RenpytoolTheme {
+            val themeMode = ThemeUtils.getThemeMode(this)
+            val darkTheme = ThemeUtils.shouldUseDarkTheme(themeMode)
+
+            RenpytoolTheme(darkTheme = darkTheme) {
                 val uiState by viewModel.uiState.collectAsState()
 
                 ProgressScreen(
@@ -53,10 +65,34 @@ class ProgressActivity : ComponentActivity() {
                     onDoneClick = {
                         setResult(if (uiState.isFailed) Activity.RESULT_CANCELED else Activity.RESULT_OK)
                         finish()
+                    },
+                    onCancelClick = {
+                        // Stop the background service
+                        val stopIntent = Intent(this, OperationService::class.java).apply {
+                            action = OperationService.ACTION_STOP
+                        }
+                        startService(stopIntent)
+
+                        // Cancel the operation and close activity
+                        setResult(Activity.RESULT_CANCELED)
+                        finish()
                     }
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkThemeChange()
+    }
+
+    private fun checkThemeChange() {
+        val newThemeMode = ThemeUtils.getThemeMode(this)
+        if (currentThemeMode != null && currentThemeMode != newThemeMode) {
+            recreate()
+        }
+        currentThemeMode = newThemeMode
     }
 
     @Deprecated("Deprecated in Java")

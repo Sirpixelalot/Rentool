@@ -3,8 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:minHeight="@dimen/min_touch_target"
     android:orientation="horizontal"
-    android:padding="12dp"
+    android:padding="@dimen/spacing_sm"
     android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
@@ -12,18 +13,19 @@
 
     <CheckBox
         android:id="@+id/cb_select"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="@dimen/min_touch_target"
+        android:layout_height="@dimen/min_touch_target"
         android:visibility="gone"
         android:clickable="false"
-        android:focusable="false" />
+        android:focusable="false"
+        android:contentDescription="@string/select_file" />
 
     <ImageView
         android:id="@+id/iv_icon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="@dimen/icon_size_medium"
+        android:layout_height="@dimen/icon_size_medium"
         android:src="@android:drawable/ic_menu_upload"
-        android:contentDescription="File icon"
+        android:contentDescription="@string/file_icon"
         app:tint="?attr/colorPrimary" />
 
     <LinearLayout
@@ -31,14 +33,14 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:layout_marginStart="12dp">
+        android:layout_marginStart="@dimen/spacing_sm">
 
         <TextView
             android:id="@+id/tv_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="File name"
-            android:textSize="16sp"
+            android:text="@string/file_name_placeholder"
+            android:textAppearance="@style/TextAppearance.Rentool.BodyLarge"
             android:textColor="?attr/colorOnSurface"
             android:singleLine="true"
             android:ellipsize="middle" />
@@ -47,10 +49,10 @@
             android:id="@+id/tv_details"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Details"
-            android:textSize="12sp"
-            android:textColor="#888888"
-            android:layout_marginTop="2dp" />
+            android:text="@string/details_placeholder"
+            android:textAppearance="@style/TextAppearance.Rentool.LabelMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginTop="@dimen/spacing_xxxs" />
 
     </LinearLayout>
 

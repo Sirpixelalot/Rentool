@@ -220,6 +220,14 @@ class OperationService : Service() {
 
     private fun stopForegroundService(keepNotification: Boolean = false) {
         progressPollingJob?.cancel()
+
+        // Cancel the running operation in MainViewModel
+        // This stops the Python backend from continuing to write progress
+        MainViewModel.cancelActiveOperation()
+
+        // Clear progress file to prevent stale data on next operation
+        tracker.clearProgress()
+
         if (keepNotification) {
             // Detach notification so it stays visible after service stops
             stopForeground(STOP_FOREGROUND_DETACH)

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base spacing unit = 4dp (Material Design 4dp grid system) -->
+    <dimen name="spacing_xxxs">2dp</dimen>
+    <dimen name="spacing_xxs">4dp</dimen>
+    <dimen name="spacing_xs">8dp</dimen>
+    <dimen name="spacing_sm">12dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+    <dimen name="spacing_xxl">48dp</dimen>
+    <dimen name="spacing_xxxl">64dp</dimen>
+
+    <!-- Card specifications -->
+    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_elevation">1dp</dimen>
+    <dimen name="card_elevation_pressed">4dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_padding_compact">12dp</dimen>
+    <dimen name="card_margin_horizontal">16dp</dimen>
+    <dimen name="card_margin_vertical">8dp</dimen>
+
+    <!-- Icons -->
+    <dimen name="icon_size_small">24dp</dimen>
+    <dimen name="icon_size_medium">40dp</dimen>
+    <dimen name="icon_size_large">56dp</dimen>
+
+    <!-- Touch targets (WCAG 2.1 compliance) -->
+    <dimen name="min_touch_target">48dp</dimen>
+
+    <!-- Progress bar -->
+    <dimen name="progress_bar_height">8dp</dimen>
+    <dimen name="progress_bar_corner_radius">4dp</dimen>
+</resources>

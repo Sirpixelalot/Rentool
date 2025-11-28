@@ -24,6 +24,8 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onImportKeystore: () -> Unit,
     onExportKeystores: () -> Unit,
+    showDecompileDialog: Boolean,
+    onShowDecompileDialogChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -82,6 +84,18 @@ fun SettingsScreen(
                 subtitle = "Dark theme",
                 selected = themeMode == MainViewModel.ThemeMode.DARK,
                 onClick = { onThemeModeChange(MainViewModel.ThemeMode.DARK) }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Dialogs Section
+            SettingsSectionHeader("Dialogs")
+
+            SettingsSwitchItem(
+                title = "Show Decompile Options Dialog",
+                subtitle = "Show options dialog before decompiling",
+                checked = showDecompileDialog,
+                onCheckedChange = onShowDecompileDialogChange
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -222,6 +236,42 @@ fun SettingsTextItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SettingsSwitchItem(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
         }
     }
 }

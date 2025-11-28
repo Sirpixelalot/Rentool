@@ -22,12 +22,11 @@
             android:id="@+id/tv_current_path"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp"
+            android:padding="@dimen/spacing_sm"
             android:text="/storage/emulated/0"
-            android:textSize="12sp"
-            android:fontFamily="monospace"
-            android:background="#F0F0F0"
-            android:textColor="#666666"
+            android:textAppearance="@style/TextAppearance.Rentool.LabelMedium.Monospace"
+            android:background="?attr/colorSurfaceVariant"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:singleLine="true"
             android:ellipsize="start" />
 
@@ -45,7 +44,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
+        android:layout_margin="@dimen/spacing_md"
         android:text="Select Folder"
         app:icon="@android:drawable/ic_menu_save"
         android:visibility="gone" />

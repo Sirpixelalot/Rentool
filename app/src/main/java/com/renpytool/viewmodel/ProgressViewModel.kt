@@ -58,8 +58,15 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
         batchMode: Boolean,
         batchTotal: Int,
         batchFiles: List<String>?,
-        extractPath: String?
+        extractPath: String?,
+        operationType: String? = null
     ) {
+        // Clear any old progress data from previous operations
+        tracker.clearProgress()
+
+        // Reset UI state to initial values
+        _uiState.value = ProgressUiState()
+
         isBatchMode = batchMode
         this.batchTotal = batchTotal
         batchFileNames = batchFiles
@@ -69,12 +76,17 @@ class ProgressViewModel(application: Application) : AndroidViewModel(application
 
     private fun startProgressPolling(extractPath: String?) {
         pollingJob = viewModelScope.launch(Dispatchers.IO) {
+            // Longer delay to ensure operation has written initial progress data
+            // The operation clears the file and writes initial data before starting Python
+            delay(500L)
+
             while (true) {
                 // Read progress on IO thread
                 val data = tracker.readProgress()
 
                 if (data != null) {
                     // Update UI state (will switch to main thread internally)
+                    // Rely on clearProgress() and job cancellation to prevent stale data
                     updateUiState(data, extractPath)
 
                     if (data.isCompleted() || data.isFailed()) {
